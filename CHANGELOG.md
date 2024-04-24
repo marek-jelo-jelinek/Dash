@@ -4,7 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## RELEASES
 
-### Release 0.14.7 - X.2.2024
+### Release 0.14.8 - 24.4.2024
+
+#### Added
+
+#### Changed
+
+#### Fixed
+
+- fixed inputs rendering for Accumulate node
+
+### Release 0.14.7 - 23.3.2024
 
 #### Added
 
