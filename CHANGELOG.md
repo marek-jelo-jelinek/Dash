@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## RELEASES
 
+### Release 0.14.9 - 23.9.2024
+
+#### Changed
+
+- upped dependencie on latest Odin Serializer 2024.2.15
+
+#### Fixed
+
+- switched to full null check to adhere to Unity overrides
+
 ### Release 0.14.8 - 24.4.2024
 
 #### Added
