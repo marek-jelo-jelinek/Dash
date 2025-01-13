@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## RELEASES
 
+### Release 0.14.11 - 13.1.2025
+
+#### Added
+
+- added OnError action callback for error catching on DashCore
+
 ### Release 0.14.10 - 11.1.2025
 
 #### Changed
