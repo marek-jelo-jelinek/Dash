@@ -161,14 +161,21 @@ namespace Dash
             return false;
         }
 
-        protected void SetError(string p_warning = null)
+        protected void SetError(string p_message = null)
         {
-            if (!string.IsNullOrEmpty(p_warning))
+            if (!string.IsNullOrEmpty(p_message))
             {
-                Debug.LogWarning(p_warning+" on node: " + _model.id+ " in graph: "+Graph+" running controller: "+Controller);
+                DashCore.Instance.OnError?.Invoke(p_message);
+                Debug.LogWarning(p_message+" on node: " + _model.id+ " in graph: "+Graph+" running controller: "+Controller);
                 #if UNITY_EDITOR
-                DashEditorDebug.Debug(new ErrorDebugItem(p_warning));
+                DashEditorDebug.Debug(new ErrorDebugItem(p_message));
                 #endif
+            }
+            else
+            {
+                p_message = "Unknown error occured.";
+                DashCore.Instance.OnError?.Invoke(p_message);
+                Debug.LogWarning(p_message+" on node: " + _model.id+ " in graph: "+Graph+" running controller: "+Controller);
             }
             hasErrorsInExecution = true;
         }

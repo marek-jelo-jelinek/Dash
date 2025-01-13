@@ -105,6 +105,8 @@ namespace Dash
         private DashVariables _globalVariables = new DashVariables();
 
         public DashVariables GlobalVariables => _globalVariables;
+        
+        public Action<string> OnError;
 
         public void AddGlobalVariables(DashVariables p_variables)
         {
