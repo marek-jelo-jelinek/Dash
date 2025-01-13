@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## RELEASES
 
+### Release 0.14.10 - 11.1.2025
+
+#### Changed
+
+- error logging for nodes especially retargeting nodes to add graph and controller info on top of node info
+
 ### Release 0.14.9 - 23.9.2024
 
 #### Changed
