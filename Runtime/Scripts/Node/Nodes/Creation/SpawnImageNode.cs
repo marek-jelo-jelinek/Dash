@@ -23,7 +23,7 @@ namespace Dash
                 if (_imagePrefab == null)
                 {
                     var go = new GameObject();
-                    Image image = go.AddComponent<Image>();
+                    go.AddComponent<Image>();
                     _imagePrefab = go.transform as RectTransform;
                 }
 

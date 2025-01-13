@@ -165,7 +165,7 @@ namespace Dash
         {
             if (!string.IsNullOrEmpty(p_warning))
             {
-                Debug.LogWarning(p_warning+" on node " + _model.id);
+                Debug.LogWarning(p_warning+" on node: " + _model.id+ " in graph: "+Graph+" running controller: "+Controller);
                 #if UNITY_EDITOR
                 DashEditorDebug.Debug(new ErrorDebugItem(p_warning));
                 #endif

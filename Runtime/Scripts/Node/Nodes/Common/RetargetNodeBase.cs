@@ -23,12 +23,10 @@ namespace Dash
         override protected void OnExecuteStart(NodeFlowData p_flowData)
         {
             Transform target = null;
-
+            
             if (!p_flowData.HasAttribute("target") && Model.isChild)
             {
-                Debug.LogWarning("Cannot retarget to a child of null in node "+_model.id);
-                hasErrorsInExecution = true;
-
+                SetError("Cannot retarget to a child of null");
                 return;
             }
 
