@@ -53,19 +53,22 @@ namespace Dash
                         
                         if (value != null && value.GetType().IsGenericType && value.GetType().GetGenericTypeDefinition() == typeof(ExposedReference<>))
                         {
-                            value = (Object) value.GetType().GetMethod("Resolve")
+                            value = (Object) value.GetType().GetMethod("Resolve")?
                                 .Invoke(value, new object[] {Controller});
                         }
                     
                         target = value as Transform;
                         
-                        if (target == null && value.GetType() == typeof(GameObject))
+                        if (target == null)
                         {
-                            target = (value as GameObject).transform;
-                        } 
-                        else if (target == null && value is Component)
-                        {
-                            target = (value as Component).transform;
+                            if (value is GameObject gameObject)
+                            {
+                                target = gameObject.transform;
+                            } 
+                            else if (value is Component component)
+                            {
+                                target = component.transform;
+                            }
                         }
                     }
                     else
