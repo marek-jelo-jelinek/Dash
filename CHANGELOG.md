@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## RELEASES
 
+### Release 0.14.12 - 25.1.2025
+
+#### Added
+
+- more sanity checks for additional potential error resolving
+
 ### Release 0.14.11 - 13.1.2025
 
 #### Added
