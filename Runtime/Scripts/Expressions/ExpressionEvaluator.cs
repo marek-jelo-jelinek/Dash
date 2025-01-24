@@ -38,6 +38,13 @@ namespace Dash
             hasErrorInEvaluation = false;
             if (_cachedExpressions == null) _cachedExpressions = new Dictionary<string, Expression>();
 
+            if (string.IsNullOrEmpty(p_expression))
+            {
+                errorMessage = "Expression cannot be null or empty.";
+                hasErrorInEvaluation = true;
+                return null;
+            }
+
             Expression cachedExpression;
             if (!_cachedExpressions.ContainsKey(p_expression))
             {
