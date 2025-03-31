@@ -127,22 +127,42 @@ namespace Dash
                 string attribute = GetParameterValue(Model.storeAttributeName, p_flowData);
                 p_flowData.SetAttribute<Color>(attribute, p_target.color);
             }
-           
-            Color startColor = Model.useFrom ? GetParameterValue(Model.fromColor, p_flowData) : p_target.color;
-            Color toColor = GetParameterValue<Color>(Model.toColor, p_flowData);
 
-            if (time == 0)
+            if (Model.alphaOnly)
             {
-                UpdateTween(p_target, 1, p_flowData, startColor, toColor);
-                return null;
-            }
-            else
-            {
-                DashTween tween = DashTween.To(p_target, 0, 1, time)
-                    .OnUpdate(f => UpdateTween(p_target, f, p_flowData, startColor, toColor))
-                    .SetDelay(delay).SetEase(easeType);
+                float startAlpha = Model.useFrom ? GetParameterValue(Model.fromAlpha, p_flowData) : p_target.alpha;
+                float toAlpha = GetParameterValue<Color>(Model.toAlpha, p_flowData);
 
-                return tween;
+                if (time == 0)
+                {
+                    UpdateTween(p_target, 1f, p_flowData, startAlpha, toAlpha, easeType);
+                    return null;
+                }
+                else
+                {
+                    DashTween tween = DashTween.To(p_target, 0, 1, time)
+                        .OnUpdate(f => UpdateTween(p_target, f, p_flowData, startAlpha, toAlpha, easeType))
+                        .SetDelay(delay).SetEase(easeType);
+
+                    return tween;
+                }
+            } else {
+                Color startColor = Model.useFrom ? GetParameterValue(Model.fromColor, p_flowData) : p_target.color;
+                Color toColor = GetParameterValue<Color>(Model.toColor, p_flowData);
+
+                if (time == 0)
+                {
+                    UpdateTween(p_target, 1, p_flowData, startColor, toColor);
+                    return null;
+                }
+                else
+                {
+                    DashTween tween = DashTween.To(p_target, 0, 1, time)
+                        .OnUpdate(f => UpdateTween(p_target, f, p_flowData, startColor, toColor))
+                        .SetDelay(delay).SetEase(easeType);
+
+                    return tween;
+                }
             }
         }
 
