@@ -96,7 +96,17 @@ namespace Dash
             else
             {
                 style.normal.textColor = Color.white;
-                GUI.Label(labelRect, Model.prefab.GetValue(null).name, style);
+                
+                var prefabValue =  Model.prefab.GetValue(null);
+                if (prefabValue != null)
+                {
+                    GUI.Label(labelRect, Model.prefab.GetValue(null).name, style);
+                }
+                else
+                {
+                    GUI.Label(labelRect, "NONE", style);
+                }
+                
             }
         }
 #endif
