@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## RELEASES
 
+### Release 0.14.13 - 31.3.2025
+
+#### Added
+
+- preserveAspect to SpawnImage
+- alpha only mode for AnimateText when targeting TextMeshPro
+
+#### Fixed
+
+- fixed and removed old compatibilty dependencies in SpawnUIPrefab
+- fixed handling null check for node visualisation in SpawnUIPrefab
+
 ### Release 0.14.12 - 25.1.2025
 
 #### Added
