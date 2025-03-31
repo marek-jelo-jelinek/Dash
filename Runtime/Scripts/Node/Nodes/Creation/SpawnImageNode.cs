@@ -71,6 +71,7 @@ namespace Dash
 
             image.maskable = GetParameterValue(Model.isMaskable, p_flowData);
             image.raycastTarget = GetParameterValue(Model.isRaycastTarget, p_flowData);
+            image.preserveAspect = GetParameterValue(Model.preserveAspect, p_flowData);
 
             if (Model.retargetToSpawned)
             {
