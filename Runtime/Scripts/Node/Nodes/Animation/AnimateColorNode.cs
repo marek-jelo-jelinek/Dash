@@ -131,7 +131,7 @@ namespace Dash
             if (Model.alphaOnly)
             {
                 float startAlpha = Model.useFrom ? GetParameterValue(Model.fromAlpha, p_flowData) : p_target.alpha;
-                float toAlpha = GetParameterValue<Color>(Model.toAlpha, p_flowData);
+                float toAlpha = GetParameterValue<float>(Model.toAlpha, p_flowData);
 
                 if (time == 0)
                 {
