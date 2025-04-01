@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## RELEASES
 
+### Release 0.14.14 - 01.04.2025
+
+#### Fixed
+
+- wrong parameter type fetching in AnimateText
+
 ### Release 0.14.13 - 31.3.2025
 
 #### Added
