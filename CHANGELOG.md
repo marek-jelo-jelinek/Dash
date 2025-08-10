@@ -4,11 +4,58 @@ All notable changes to this project will be documented in this file.
 
 ## RELEASES
 
-### Release 0.14.9 - 10.8.2024
+### Release 0.14.15 - 01.04.2025
 
 #### Added
 
-- added useLocalPosition for AnimatePosition node
+- added useLocalPosition for AnimatePosition
+
+### Release 0.14.14 - 01.04.2025
+
+#### Fixed
+
+- wrong parameter type fetching in AnimateText
+
+### Release 0.14.13 - 31.3.2025
+
+#### Added
+
+- preserveAspect to SpawnImage
+- alpha only mode for AnimateText when targeting TextMeshPro
+
+#### Fixed
+
+- fixed and removed old compatibilty dependencies in SpawnUIPrefab
+- fixed handling null check for node visualisation in SpawnUIPrefab
+
+### Release 0.14.12 - 25.1.2025
+
+#### Added
+
+- more sanity checks for additional potential error resolving
+
+### Release 0.14.11 - 13.1.2025
+
+#### Added
+
+- added OnError action callback for error catching on DashCore
+
+### Release 0.14.10 - 11.1.2025
+
+#### Changed
+
+- error logging for nodes especially retargeting nodes to add graph and controller info on top of node info
+
+### Release 0.14.9 - 23.9.2024
+
+#### Changed
+
+- upped dependencie on latest Odin Serializer 2024.2.15
+
+#### Fixed
+
+- switched to full null check to adhere to Unity overrides
+>>>>>>> df58b4aa8194bb7c8dbbe2af6e63f78fbde13fc6
 
 ### Release 0.14.8 - 24.4.2024
 

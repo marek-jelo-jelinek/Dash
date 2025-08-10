@@ -30,15 +30,15 @@ namespace Dash
         public Parameter<bool> usePooling = new Parameter<bool>(false);
 
         [TitledGroup("Pooling")]
-        [Dependency("usePoolingP", true)]
+        [Dependency("usePooling", true)]
         public Parameter<string> poolId = new Parameter<string>("");
         
         [TitledGroup("Pooling")]
-        [Dependency("usePoolingP", true)]
+        [Dependency("usePooling", true)]
         public Parameter<bool> createPoolIdAttribute = new Parameter<bool>(true);
         
         [TitledGroup("Pooling")]
-        [Dependency("usePoolingP", true)]
+        [Dependency("usePooling", true)]
         [Dependency("createPoolIdAttribute", true)]
         public Parameter<string> poolIdAttributeName = new Parameter<string>("pool");
     }

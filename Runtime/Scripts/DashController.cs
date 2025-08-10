@@ -75,8 +75,12 @@ namespace Dash
             {
                 if (!Application.isPlaying)
                 {
-                    GetComponent<IVariables>()?.Initialize(this);
-                    return GetComponent<IVariables>();
+                    IVariables variables = GetComponent<IVariables>();
+                    if (variables != null)
+                    {
+                        variables.Initialize(this);
+                    }
+                    return variables;
                 }
                 else
                 {
@@ -135,7 +139,8 @@ namespace Dash
 
             Core.Bind(this);
 
-            _variables = GetComponent<DashVariablesController>()?.Variables;
+            DashVariablesController dvc = GetComponent<DashVariablesController>();
+            if (dvc != null) _variables = dvc.Variables;
 
             _initialized = true;
         }

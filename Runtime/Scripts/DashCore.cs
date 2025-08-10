@@ -15,7 +15,7 @@ namespace Dash
 {
     public class DashCore
     {
-        public static string VERSION = "0.14.6";
+        public static string VERSION = "0.14.14";
         
         public DashRuntimeConfig Config { get; private set; }
         
@@ -105,6 +105,8 @@ namespace Dash
         private DashVariables _globalVariables = new DashVariables();
 
         public DashVariables GlobalVariables => _globalVariables;
+        
+        public Action<string> OnError;
 
         public void AddGlobalVariables(DashVariables p_variables)
         {
@@ -157,7 +159,13 @@ namespace Dash
 
         public void SendEvent(string p_name, NodeFlowData p_flowData)
         {
-            _controllers.ToList().ForEach(dc => dc?.SendEvent(p_name, p_flowData));
+            _controllers.ToList().ForEach(dc =>
+            {
+                if (dc != null)
+                {
+                    dc.SendEvent(p_name, p_flowData);
+                }
+            });
             
             if (_listeners.ContainsKey(p_name))
             {

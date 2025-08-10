@@ -34,6 +34,7 @@ namespace Dash
         public Parameter<bool> setNativeSize = new Parameter<bool>(false);
         public Parameter<bool> isMaskable = new Parameter<bool>(true);
         public Parameter<bool> isRaycastTarget = new Parameter<bool>(true);
+        public Parameter<bool> preserveAspect = new Parameter<bool>(false);
 
         public bool setTargetAsParent = true;
         public bool retargetToSpawned = false;
