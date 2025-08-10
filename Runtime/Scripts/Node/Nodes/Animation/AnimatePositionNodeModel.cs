@@ -11,6 +11,10 @@ namespace Dash
     [Serializable]
     public class AnimatePositionNodeModel : AnimationNodeModelBase
     {
+        [Order(10)]
+        [TitledGroup("Properties")]
+        public bool useLocalPosition = false;
+        
         [Order(11)]
         [TitledGroup("Properties")]
         public bool useFrom = false;
