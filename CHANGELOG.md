@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## RELEASES
 
+### Release 0.14.9 - 10.8.2024
+
+#### Added
+
+- added useLocalPosition for AnimatePosition node
+
 ### Release 0.14.8 - 24.4.2024
 
 #### Added
