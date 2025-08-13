@@ -25,6 +25,8 @@ namespace Dash
                     var go = new GameObject();
                     go.AddComponent<Image>();
                     _imagePrefab = go.transform as RectTransform;
+
+                    DontDestroyOnLoad(go);
                 }
 
                 return _imagePrefab;
