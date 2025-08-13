@@ -4,7 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## RELEASES
 
-### Release 0.14.15 - 01.04.2025
+### Release 0.14.16 - 14.08.2025
+
+#### Changed
+
+- changed Image prefabs in SpawnUIImage are now DontDestoyOnLoad
+
+### Release 0.14.15 - 11.08.2025
 
 #### Added
 
