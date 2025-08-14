@@ -26,7 +26,7 @@ namespace Dash
                     go.AddComponent<Image>();
                     _imagePrefab = go.transform as RectTransform;
 
-                    DontDestroyOnLoad(go);
+                    UnityEngine.Object.DontDestroyOnLoad(go);
                 }
 
                 return _imagePrefab;
