@@ -55,17 +55,21 @@ namespace Dash
             }
             else
             {
-                // Virtual tween to update from directly
-                // Tween tween = DOTween
-                //     .To((f) => UpdateTween(targetTransform, f, p_flowData, startRotation, toRotation, easing), 0,
-                //         1, time)
-                //     .SetDelay(delay)
-                //     .SetEase(Ease.Linear);
                 return DashTween.To(targetTransform, 0, 1, time)
                     .SetDelay(delay)
                     .OnUpdate(f => UpdateTween(targetTransform, f, p_flowData, startRotation, toRotation, easing));
 
             }
+        }
+        
+        public Vector3 LerpEulerAngles(Vector3 from, Vector3 to, float t)
+        {
+            Vector3 result = new Vector3(
+                Mathf.LerpAngle(from.x, to.x, t),
+                Mathf.LerpAngle(from.y, to.y, t),
+                Mathf.LerpAngle(from.z, to.z, t)
+            );
+            return result;
         }
 
         protected void UpdateTween(Transform p_target, float p_delta, NodeFlowData p_flowData, Quaternion p_startRotation, Vector3 p_toRotation, EaseType p_easeType)
@@ -77,22 +81,61 @@ namespace Dash
                 return;
             }
 
-            Quaternion rotation = Quaternion.Euler(p_toRotation);
-            if (Model.isToRelative) rotation = rotation * p_startRotation;
-            //p_target.localRotation = Quaternion.Lerp(p_startRotation, rotation, DOVirtual.EasedValue(0,1, p_delta, p_easing));
-            p_target.localRotation =
-                Quaternion.Lerp(p_startRotation, rotation, DashTween.EaseValue(0, 1, p_delta, p_easeType));
+            float t = DashTween.EaseValue(0, 1, p_delta, p_easeType);
+    
+            if (Model.isToRelative)
+            {
+                bool needsMultiRotation = Mathf.Abs(p_toRotation.x) > 180 || 
+                                          Mathf.Abs(p_toRotation.y) > 180 || 
+                                          Mathf.Abs(p_toRotation.z) > 180;
+                
+                Vector3 eulers;
+                if (needsMultiRotation)
+                {
+                    eulers = Vector3.Lerp(Vector3.zero, p_toRotation, t);
+                }
+                else
+                {
+                    eulers = LerpEulerAngles(Vector3.zero, p_toRotation, t);
+                }
+                
+                Quaternion relativeRotation = Quaternion.Euler(eulers);
+                p_target.localRotation = p_startRotation * relativeRotation;
+            }
+            else
+            {
+                Vector3 startEulers = p_startRotation.eulerAngles;
+                
+                startEulers.x = startEulers.x > 180 ? startEulers.x - 360 : startEulers.x;
+                startEulers.y = startEulers.y > 180 ? startEulers.y - 360 : startEulers.y;
+                startEulers.z = startEulers.z > 180 ? startEulers.z - 360 : startEulers.z;
+                
+                Vector3 delta = p_toRotation - startEulers;
+                
+                bool needsMultiRotation = Mathf.Abs(delta.x) > 180 || 
+                                          Mathf.Abs(delta.y) > 180 || 
+                                          Mathf.Abs(delta.z) > 180;
+                
+                Debug.Log(needsMultiRotation);
+                Vector3 eulers;
+                if (needsMultiRotation)
+                {
+                    eulers = Vector3.Lerp(startEulers, p_toRotation, t);
+                }
+                else
+                {
+                    eulers = LerpEulerAngles(startEulers, p_toRotation, t);
+                }
+                
+                p_target.localRotation = Quaternion.Euler(eulers);
+            }
 
-            /*
-            Debug.Log(rotation.eulerAngles + " : " + p_toRotation + " : " + p_startRotation.eulerAngles);
-            Vector3 finalRotation = rotation.eulerAngles;
-            finalRotation.z = finalRotation.z > 180 ? finalRotation.z - 360 : finalRotation.z;
-            Vector3 easedRotation = new Vector3(DOVirtual.EasedValue(0, finalRotation.x, p_delta, Model.easing),
-                DOVirtual.EasedValue(0, finalRotation.y, p_delta, Model.easing),
-                DOVirtual.EasedValue(0, finalRotation.z, p_delta, Model.easing));
-            
-            p_target.localRotation = p_startRotation * Quaternion.Euler(easedRotation);
-            */
+            // Vector3 eulers = Vector3.Lerp(Vector3.zero, p_toRotation, DashTween.EaseValue(0, 1, p_delta, p_easeType));
+
+            // Quaternion rotation = Quaternion.Euler(eulers);
+            // if (Model.isToRelative) rotation = rotation * p_startRotation;
+            // p_target.localRotation = rotation;
+            // //Quaternion.Lerp(p_startRotation, rotation, DashTween.EaseValue(0, 1, p_delta, p_easeType));
         }
         
         #if UNITY_EDITOR

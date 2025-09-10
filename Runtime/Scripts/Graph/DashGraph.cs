@@ -19,9 +19,11 @@ using UnityEditor;
 namespace Dash
 {
     [Serializable]
-    public class DashGraph : ScriptableObject, ISerializationCallbackReceiver
+    public class DashGraph : ScriptableObject, ISerializationCallbackReceiver, IVariableOwner
     {
         public int version { get; private set; } = 0;
+
+        public IVariableBindable Bindable => null;
 
         [field: NonSerialized]
         public event Action<OutputNode, NodeFlowData> OnOutput;
@@ -126,13 +128,13 @@ namespace Dash
         public void SendEvent(string p_name, Transform p_target)
         {
             NodeFlowData flowData = new NodeFlowData();
-            flowData.SetAttribute(NodeFlowDataReservedAttributes.TARGET, p_target);
+            flowData.SetAttribute(DashReservedParameterNames.TARGET, p_target);
 
             SendEvent(p_name, flowData);
         }
         public void SendEvent(string p_name, NodeFlowData p_flowData)
         {
-            p_flowData.SetAttribute(NodeFlowDataReservedAttributes.EVENT, p_name);
+            p_flowData.SetAttribute(DashReservedParameterNames.EVENT, p_name);
             
             if (_nodeListeners.ContainsKey(p_name))
             {
@@ -259,6 +261,21 @@ namespace Dash
         public List<T> GetNodesByType<T>() where T : NodeBase
         {
             return Nodes.FindAll(n => n is T).ConvertAll(n => (T)n);
+        }
+
+        public bool HasInputOfName(string p_name)
+        {
+            return Nodes.Exists(n => n is InputNode && ((InputNode)n).Model.inputName == p_name);
+        }
+        
+        public bool HasOutputOfName(string p_name)
+        {
+            return Nodes.Exists(n => n is OutputNode && ((OutputNode)n).Model.outputName == p_name);
+        }
+        
+        public bool HasOnCustomEventOfName(string p_name)
+        {
+            return Nodes.Exists(n => n is OnCustomEventNode && ((OnCustomEventNode)n).Model.eventName == p_name);
         }
 
         public int GetOutputIndex(OutputNode p_node)
@@ -403,6 +420,18 @@ namespace Dash
             }
         }
 
+        public virtual void MarkDirty()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorUtility.SetDirty(this);
+#endif
+
+            if (_parentGraph != null)
+            {
+                _parentGraph.MarkDirty();
+            }
+        }
+
 #region SERIALIZATION
 
         [SerializeField, HideInInspector]
@@ -410,6 +439,9 @@ namespace Dash
         
         void ISerializationCallbackReceiver.OnAfterDeserialize()
         {
+            if (this == null)
+                return;
+            
             using (var cachedContext = OdinSerializer.Utilities.Cache<DeserializationContext>.Claim())
             {
                 cachedContext.Value.Config.SerializationPolicy = SerializationPolicies.Everything;
@@ -419,6 +451,9 @@ namespace Dash
         
         void ISerializationCallbackReceiver.OnBeforeSerialize()
         {
+            if (this == null)
+                return;
+            
 #if UNITY_EDITOR
             SetVersion(DashCore.GetVersionNumber());
             
@@ -494,6 +529,7 @@ namespace Dash
 
         public bool previewControlsViewMinimized = true;
         public Vector2 viewOffset = Vector2.zero;
+        public float zoom = 1;
         public bool graphVariablesMinimized = true;
         public bool globalVariablesMinimized = true;
 
@@ -676,8 +712,8 @@ namespace Dash
             {
                 messages.Add(("Duplicate node id found on node: " + n.Id, Color.red));
             });
-            
-            nodes = Nodes.FindAll(n => n.GetType().GetAttribute<ObsoleteAttribute>() != null);
+
+            nodes = Nodes.FindAll(n => n != null && n.GetType().GetAttribute<ObsoleteAttribute>() != null);
             nodes?.ForEach(n =>
             {
                 messages.Add((

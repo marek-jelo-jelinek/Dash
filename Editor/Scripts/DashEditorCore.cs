@@ -29,7 +29,7 @@ namespace Dash.Editor
 
         static public GUISkin Skin => (GUISkin)Resources.Load("Skins/EditorSkins/NodeEditorSkin");
 
-        static public bool DetailsVisible => EditorConfig.zoom < 2.5;
+        //static public bool DetailsVisible => EditorConfig.zoom < 2.5;
         
         static public List<DashGraph> GraphAssets { get; private set; }
 
@@ -61,21 +61,21 @@ namespace Dash.Editor
         
         public static void SetDefineSymbols()
         {
-            string definesString =
-                PlayerSettings.GetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
-            List<string> allDefines = definesString.Split(';').ToList();
-            if (EditorConfig.enableDashFormatters)
-            {
-                if (!allDefines.Contains("DASH_FORMATTERS")) 
-                    allDefines.Add("DASH_FORMATTERS");
-            }
-            else
-            {
-                allDefines.Remove("DASH_FORMATTERS");
-            }
-            
-            PlayerSettings.SetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup,
-                string.Join(";", allDefines.ToArray()));
+            // string definesString =
+            //     PlayerSettings.GetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
+            // List<string> allDefines = definesString.Split(';').ToList();
+            // if (EditorConfig.enableDashFormatters)
+            // {
+            //     if (!allDefines.Contains("DASH_FORMATTERS")) 
+            //         allDefines.Add("DASH_FORMATTERS");
+            // }
+            // else
+            // {
+            //     allDefines.Remove("DASH_FORMATTERS");
+            // }
+            //
+            // PlayerSettings.SetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup,
+            //     string.Join(";", allDefines.ToArray()));
         }
 
         public static void ScanGraphAssets()
@@ -117,21 +117,21 @@ namespace Dash.Editor
             }
         }
 
-        public static void SetDirty()
-        {
-            if (EditorConfig.editingGraph != null)
-                EditorUtility.SetDirty(EditorConfig.editingGraph);
-
-            if (EditorConfig.editingGraph != EditorConfig.editingRootGraph)
-                EditorUtility.SetDirty(EditorConfig.editingRootGraph);
-            
-            if (EditorConfig.editingController != null)
-                EditorUtility.SetDirty(EditorConfig.editingController);
-        }
+        // public static void SetDirty()
+        // {
+        //     if (EditorConfig.editingGraph != null)
+        //         EditorUtility.SetDirty(EditorConfig.editingGraph);
+        //
+        //     if (EditorConfig.editingGraph != EditorConfig.editingRootGraph)
+        //         EditorUtility.SetDirty(EditorConfig.editingRootGraph);
+        //     
+        //     if (EditorConfig.editingController != null)
+        //         EditorUtility.SetDirty(EditorConfig.editingController);
+        // }
 
         public static void EditController(DashController p_controller, string p_graphPath = "")
         {
-            SelectionManager.ClearSelection();
+            SelectionManager.ClearSelection(EditorConfig.editingGraph);
 
             if (p_controller != null)
             {
@@ -148,7 +148,7 @@ namespace Dash.Editor
 
         public static void EditGraph(DashGraph p_graph, string p_graphPath = "")
         {
-            SelectionManager.ClearSelection();
+            SelectionManager.ClearSelection(EditorConfig.editingGraph);
 
             EditorConfig.editingRootGraph = p_graph;
             EditorConfig.editingGraphPath = p_graphPath;
@@ -158,7 +158,7 @@ namespace Dash.Editor
         
         public static void UnloadGraph()
         {
-            SelectionManager.ClearSelection();
+            SelectionManager.ClearSelection(EditorConfig.editingGraph);
             
             EditorConfig.editingGraph = null;
         }

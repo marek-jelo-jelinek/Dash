@@ -10,45 +10,46 @@ namespace Dash.Editor
 {
     public class ConnectionContextMenu
     {
-        static private DashGraph Graph => DashEditorCore.EditorConfig.editingGraph;
-        
-        static public void Show(NodeConnection p_connection)
+        static public void Show(DashGraph p_graph, NodeConnection p_connection)
         {
             RuntimeGenericMenu menu = new RuntimeGenericMenu();
 
             if (p_connection.active)
             {
-                menu.AddItem(new GUIContent("Deactivate Connection"), false, DeactivateConnection, p_connection);
+                menu.AddItem(new GUIContent("Deactivate Connection"), false, () => DeactivateConnection(p_graph, p_connection));
 
             }
             else
             {
-                menu.AddItem(new GUIContent("Activate Connection"), false, ActivateConnection, p_connection);
+                menu.AddItem(new GUIContent("Activate Connection"), false, () => ActivateConnection(p_graph, p_connection));
             }
 
-            menu.AddItem(new GUIContent("Delete Connection"), false, DeleteConnection, p_connection);
+            menu.AddItem(new GUIContent("Delete Connection"), false, () => DeleteConnection(p_graph, p_connection));
             
             //menu.ShowAsContext();
             GenericMenuPopup.Show(menu, "",  Event.current.mousePosition, 200, 300, false, false);
         }
         
-        static void DeleteConnection(object p_connection)
+        static void DeleteConnection(DashGraph p_graph ,NodeConnection p_connection)
         {
-            Undo.RegisterCompleteObjectUndo(Graph, "Delete Connection");
-            Graph.Disconnect((NodeConnection)p_connection);
-            DashEditorCore.SetDirty();
+            Undo.RegisterCompleteObjectUndo(p_graph, "Delete Connection");
+            p_graph.Disconnect(p_connection);
+            p_graph.MarkDirty();
+            //DashEditorCore.SetDirty();
         }
         
-        static void DeactivateConnection(object p_connection)
+        static void DeactivateConnection(DashGraph p_graph ,NodeConnection p_connection)
         {
-            ((NodeConnection) p_connection).active = false;
-            DashEditorCore.SetDirty();
+            p_connection.active = false;
+            p_graph.MarkDirty();
+            //DashEditorCore.SetDirty();
         }
         
-        static void ActivateConnection(object p_connection)
+        static void ActivateConnection(DashGraph p_graph ,NodeConnection p_connection)
         {
-            ((NodeConnection) p_connection).active = true;
-            DashEditorCore.SetDirty();
+            p_connection.active = true;
+            p_graph.MarkDirty();
+            //DashEditorCore.SetDirty();
         }
     }
 }

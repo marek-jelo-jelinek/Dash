@@ -10,29 +10,27 @@ namespace Dash.Editor
 {
     public class NodeContextMenu
     {
-        static private DashGraph Graph => DashEditorCore.EditorConfig.editingGraph;
-        
-        public static void Show(NodeBase p_node)
+        public static void Show(DashGraph p_graph, NodeBase p_node, DashController p_controller)
         {
             RuntimeGenericMenu menu = new RuntimeGenericMenu();
-            
+
             if (SelectionManager.SelectedCount > 1)
             {
-                menu.AddItem(new GUIContent("Copy Nodes"), false, CopyNode, null);
-                menu.AddItem(new GUIContent("Delete Nodes"), false, DeleteNode, null);
-                menu.AddItem(new GUIContent("Duplicate Nodes"), false, DuplicateNodes);
+                menu.AddItem(new GUIContent("Copy Nodes"), false, () => CopyNode(p_graph, null));
+                menu.AddItem(new GUIContent("Delete Nodes"), false, () => DeleteNode(p_graph, null));
+                menu.AddItem(new GUIContent("Duplicate Nodes"), false, () => DuplicateNodes(p_graph, p_controller));
                 menu.AddSeparator("");
-                menu.AddItem(new GUIContent("Create Box"), false, CreateBox);
-                menu.AddItem(new GUIContent("Create SubGraph"), false, CreateSubGraph, null);
+                menu.AddItem(new GUIContent("Create Box"), false, () => CreateBox(p_graph));
+                menu.AddItem(new GUIContent("Create SubGraph"), false, () => CreateSubGraph(p_graph, p_controller));
             }
             else
             {
-                menu.AddItem(new GUIContent("Copy Node"), false, CopyNode, p_node);
-                menu.AddItem(new GUIContent("Delete Node"), false, DeleteNode, p_node);   
-                menu.AddItem(new GUIContent("Duplicate Node"), false, DuplicateNode, p_node);
-                menu.AddItem(new GUIContent("Disconnect Node"), false, DisconnectNode, p_node);
-                menu.AddItem(new GUIContent("Arrange Nodes"), false, ArrangeNodes, p_node);
-                menu.AddItem(new GUIContent("Select Connected"), false, SelectConnectedNodes, p_node);
+                menu.AddItem(new GUIContent("Copy Node"), false, () => CopyNode(p_graph, p_node));
+                menu.AddItem(new GUIContent("Delete Node"), false, () => DeleteNode(p_graph, p_node));   
+                menu.AddItem(new GUIContent("Duplicate Node"), false, () => DuplicateNode(p_graph, p_node, p_controller));
+                menu.AddItem(new GUIContent("Disconnect Node"), false, () => DisconnectNode(p_graph, p_node));
+                menu.AddItem(new GUIContent("Arrange Nodes"), false, () => ArrangeNodes(p_graph, p_node));
+                menu.AddItem(new GUIContent("Select Connected"), false, () => SelectConnectedNodes(p_graph, p_node));
                 
                 menu.AddSeparator("");
                 if (p_node.HasComment())
@@ -47,188 +45,188 @@ namespace Dash.Editor
                 if (p_node is SubGraphNode)
                 {
                     menu.AddSeparator("");
-                    menu.AddItem(new GUIContent("Unpack SubGraph"), false, UnpackSubGraph, p_node);
+                    menu.AddItem(new GUIContent("Unpack SubGraph"), false,
+                        () => UnpackSubGraph(p_graph, (SubGraphNode)p_node, p_controller));
                 }
-
+            
                 menu.AddSeparator("");
-                menu.AddItem(new GUIContent("Set as Preview"), false, SetAsPreview, p_node);
-                menu.AddItem(new GUIContent("Instant Preview"), false, InstantPreview, p_node);
-
-                var controller = DashEditorCore.EditorConfig.editingController;
-                if (p_node is InputNode && controller != null)
+                menu.AddItem(new GUIContent("Set as Preview"), false, () => SetAsPreview(p_graph, p_node));
+                menu.AddItem(new GUIContent("Instant Preview"), false, () => InstantPreview(p_node, p_controller));
+                
+                if (p_node is InputNode && p_controller != null)
                 {
-                    
                     InputNode node = p_node as InputNode;
                     menu.AddSeparator("");
-                    if (!controller.bindStart || controller.bindStartInput != node.Model.inputName)
+                    if (!p_controller.bindStart || p_controller.bindStartInput != node.Model.inputName)
                     {
-                        menu.AddItem(new GUIContent("Set as Start Input"), false, SetAsStartInput, p_node);
+                        menu.AddItem(new GUIContent("Set as Start Input"), false,
+                            () => SetAsStartInput((InputNode)p_node, p_controller));
                     }
                     else
                     {
-                        menu.AddItem(new GUIContent("Remove as Start Input"), false, RemoveAsStartInput, p_node);
+                        menu.AddItem(new GUIContent("Remove as Start Input"), false,
+                            () => RemoveAsStartInput((InputNode)p_node, p_controller));
                     }
-
-                    if (!controller.bindOnEnable || controller.bindOnEnableInput != node.Model.inputName)
+            
+                    if (!p_controller.bindOnEnable || p_controller.bindOnEnableInput != node.Model.inputName)
                     {
-                        menu.AddItem(new GUIContent("Set as OnEnable Input"), false, SetAsOnEnableInput, p_node);    
+                        menu.AddItem(new GUIContent("Set as OnEnable Input"), false,
+                            () => SetAsOnEnableInput((InputNode)p_node, p_controller));
                     }
                     else
                     {
-                        menu.AddItem(new GUIContent("Remove as OnEnable Input"), false, RemoveAsOnEnableInput, p_node);
+                        menu.AddItem(new GUIContent("Remove as OnEnable Input"), false,
+                            () => RemoveAsOnEnableInput((InputNode)p_node, p_controller));
                     }
                     
                 }
             }
             
             menu.AddSeparator("");
-
-            if (!SelectionManager.selectedNodes.Contains(Graph.Nodes.IndexOf(p_node)))
+            
+            if (!SelectionManager.selectedNodes.Contains(p_graph.Nodes.IndexOf(p_node)))
             {
-                menu.AddItem(new GUIContent("Connect Selection as Output"), false, ConnectSelectionAsOutput, p_node);
-                menu.AddItem(new GUIContent("Connect Selection as Input"), false, ConnectSelectionAsInput, p_node);
+                menu.AddItem(new GUIContent("Connect Selection as Output"), false,
+                    () => ConnectSelectionAsOutput(p_graph, p_node));
+                menu.AddItem(new GUIContent("Connect Selection as Input"), false,
+                    () => ConnectSelectionAsInput(p_graph, p_node));
             }
-
+            
             p_node.GetCustomContextMenu(ref menu);
             
             GenericMenuPopup.Show(menu, "",  Event.current.mousePosition, 240, 300, false, false);
         }
 
-        static void ConnectSelectionAsInput(object p_node)
+        static void ConnectSelectionAsInput(DashGraph p_graph, NodeBase p_node)
         {
             foreach (int nodeIndex in SelectionManager.selectedNodes)
             {
-                NodeBase node = Graph.Nodes[nodeIndex];
-                Graph.Connect((NodeBase)p_node, 0, node, 0);
+                NodeBase node = p_graph.Nodes[nodeIndex];
+                p_graph.Connect(p_node, 0, node, 0);
             }
             
-            DashEditorCore.SetDirty();
+            p_graph.MarkDirty();
+            //DashEditorCore.SetDirty();
         }
         
-        static void ConnectSelectionAsOutput(object p_node)
+        static void ConnectSelectionAsOutput(DashGraph p_graph, NodeBase p_node)
         {
             foreach (int nodeIndex in SelectionManager.selectedNodes)
             {
-                NodeBase node = Graph.Nodes[nodeIndex];
-                Graph.Connect(node, 0, (NodeBase)p_node, 0);
+                NodeBase node = p_graph.Nodes[nodeIndex];
+                p_graph.Connect(node, 0, p_node, 0);
             }
             
-            DashEditorCore.SetDirty();
+            p_graph.MarkDirty();
+            //DashEditorCore.SetDirty();
         }
 
-        static void SetAsStartInput(object p_node)
+        static void SetAsStartInput(InputNode p_node, DashController p_controller)
         {
-            InputNode node = p_node as InputNode;
-
-            DashEditorCore.EditorConfig.editingController.bindStart = true;
-            DashEditorCore.EditorConfig.editingController.bindStartInput = node.Model.inputName;
+            p_controller.bindStart = true;
+            p_controller.bindStartInput = p_node.Model.inputName;
         }
         
-        static void RemoveAsStartInput(object p_node)
+        static void RemoveAsStartInput(InputNode p_node, DashController p_controller)
         {
-            InputNode node = p_node as InputNode;
-            DashEditorCore.EditorConfig.editingController.bindStart = false;
-            DashEditorCore.EditorConfig.editingController.bindStartInput = "";
+            p_controller.bindStart = false;
+            p_controller.bindStartInput = "";
         }
 
-        static void SetAsOnEnableInput(object p_node)
+        static void SetAsOnEnableInput(InputNode p_node, DashController p_controller)
         {
-            InputNode node = p_node as InputNode;
-            DashEditorCore.EditorConfig.editingController.bindOnEnable = true;
-            DashEditorCore.EditorConfig.editingController.bindOnEnableInput = node.Model.inputName;
-        }
-        
-        static void RemoveAsOnEnableInput(object p_node)
-        {
-            InputNode node = p_node as InputNode;
-            DashEditorCore.EditorConfig.editingController.bindOnEnable = false;
-            DashEditorCore.EditorConfig.editingController.bindOnEnableInput = "";
+            p_controller.bindOnEnable = true;
+            p_controller.bindOnEnableInput = p_node.Model.inputName;
         }
 
-        static void CopyNode(object p_node)
+        static void RemoveAsOnEnableInput(InputNode p_node, DashController p_controller)
+        {
+            p_controller.bindOnEnable = false;
+            p_controller.bindOnEnableInput = "";
+        }
+
+        static void CopyNode(DashGraph p_graph, NodeBase p_node)
         {
             if (p_node == null)
             {
-                SelectionManager.CopySelectedNodes(Graph);
+                SelectionManager.CopySelectedNodes(p_graph);
             }
             else
             {
-                SelectionManager.CopyNode((NodeBase)p_node, Graph);
+                SelectionManager.CopyNode(p_graph, p_node);
             }
         }
 
-        static void DeleteNode(object p_node)
+        static void DeleteNode(DashGraph p_graph, NodeBase p_node)
         {
             if (p_node == null)
             {
-                SelectionManager.DeleteSelectedNodes(Graph);
+                SelectionManager.DeleteSelectedNodes(p_graph);
             }
             else
             {
-                SelectionManager.DeleteNode((NodeBase)p_node, Graph);
+                SelectionManager.DeleteNode(p_graph, p_node);
             }
         }
 
-        static void DisconnectNode(object p_node)
+        static void DisconnectNode(DashGraph p_graph, NodeBase p_node)
         {
             if (p_node != null)
             {
-                Graph.DisconnectNode((NodeBase) p_node);
+                p_graph.DisconnectNode(p_node);
             }
         }
         
-        static void CreateSubGraph(object p_node)
+        static void CreateSubGraph(DashGraph p_graph, IExposedPropertyTable p_propertyTable)
         {
-            if (p_node == null)
-            {
-                SelectionManager.CreateSubGraphFromSelectedNodes(Graph);
-            }
+            SelectionManager.CreateSubGraphFromSelectedNodes(p_graph, p_propertyTable);
         }
         
-        static void UnpackSubGraph(object p_node)
+        static void UnpackSubGraph(DashGraph p_graph, SubGraphNode p_node, IExposedPropertyTable p_propertyTable)
         {
             if (p_node != null)
             {
-                SelectionManager.UnpackSelectedSubGraphNode(Graph, (SubGraphNode)p_node);
+                SelectionManager.UnpackSelectedSubGraphNode(p_graph, p_node, p_propertyTable);
             }
         }
         
-        static void DuplicateNode(object p_node)
+        static void DuplicateNode(DashGraph p_graph, NodeBase p_node, IExposedPropertyTable p_propertyTable)
         {
-            SelectionManager.DuplicateNode((NodeBase)p_node, Graph);
+            SelectionManager.DuplicateNode(p_node, p_graph, p_propertyTable);
         }
         
-        static void DuplicateNodes()
+        static void DuplicateNodes(DashGraph p_graph, IExposedPropertyTable p_propertyTable)
         {
-            SelectionManager.DuplicateSelectedNodes(Graph);
+            SelectionManager.DuplicateSelectedNodes(p_graph, p_propertyTable);
         }
 
-        static void ArrangeNodes(object p_node)
+        static void ArrangeNodes(DashGraph p_graph, NodeBase p_node)
         {
-            SelectionManager.ArrangeNodes(Graph, (NodeBase)p_node);
+            SelectionManager.ArrangeNodes(p_graph, p_node);
         }
         
-        static void SelectConnectedNodes(object p_node)
+        static void SelectConnectedNodes(DashGraph p_graph, NodeBase p_node)
         {
-            SelectionManager.SelectConnectedNodes(Graph, (NodeBase)p_node);
+            SelectionManager.SelectConnectedNodes(p_graph, (NodeBase)p_node);
         }
 
-        static void CreateBox()
+        static void CreateBox(DashGraph p_graph)
         {
-            Undo.RegisterCompleteObjectUndo(Graph, "Create Box");
+            Undo.RegisterCompleteObjectUndo(p_graph, "Create Box");
             
-            SelectionManager.CreateBoxAroundSelectedNodes(Graph);
+            SelectionManager.CreateBoxAroundSelectedNodes(p_graph);
         }
         
-        static void SetAsPreview(object p_node)
+        static void SetAsPreview(DashGraph p_graph, NodeBase p_node)
         {
-            Graph.previewNode = (NodeBase)p_node;
-            DashEditorCore.SetDirty();
+            p_graph.previewNode = p_node;
+            p_graph.MarkDirty();
+            //DashEditorCore.SetDirty();
         }
         
-        static void InstantPreview(object p_node)
+        static void InstantPreview(NodeBase p_node, DashController p_controller)
         {
-            DashEditorCore.Previewer.StartPreview((NodeBase)p_node);
+            DashEditorCore.Previewer.StartPreview(p_node, p_controller);
         }
     }
 }

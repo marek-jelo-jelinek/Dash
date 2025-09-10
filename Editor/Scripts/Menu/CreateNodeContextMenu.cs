@@ -16,31 +16,31 @@ namespace Dash.Editor
     {
         
         static private Vector2 _lastMousePosition;
-        static public void Show()
+        static public void Show(DashGraph p_graph, IExposedPropertyTable p_propertyTable)
         {
-            Get().ShowAsEditorMenu();
+            Get(p_graph, p_propertyTable).ShowAsEditorMenu();
         }
 
-        static public void ShowAsPopup()
+        static public void ShowAsPopup(DashGraph p_graph, IExposedPropertyTable p_propertyTable)
         {
             _lastMousePosition = Event.current.mousePosition;
 
-            GenericMenuPopup.Show(Get(), "Create Node", _lastMousePosition, 240, 300);
+            GenericMenuPopup.Show(Get(p_graph, p_propertyTable), "Create Node", _lastMousePosition, 240, 300);
         }
         
-        static public RuntimeGenericMenu Get()
+        static public RuntimeGenericMenu Get(DashGraph p_graph, IExposedPropertyTable p_propertyTable)
         {
             RuntimeGenericMenu menu = new RuntimeGenericMenu();
             
-            if (DashEditorCore.EditorConfig.editingGraph != null)
+            if (p_graph != null)
             {
-                foreach (var graph in DashEditorCore.GraphAssets)
+                foreach (var subGraph in DashEditorCore.GraphAssets)
                 {
-                    if (graph == null || graph == DashEditorCore.EditorConfig.editingGraph)
+                    if (subGraph == null || subGraph == p_graph)
                         continue;
-                    
-                    menu.AddItem(new GUIContent("Graphs/" + graph.name, ""), false, CreateGraphNode,
-                        graph);
+                
+                    menu.AddItem(new GUIContent("Graphs/" + subGraph.name, ""), false,
+                        () => CreateGraphNode(p_graph, subGraph));
                 }
                 
                 Type[] nodeTypes = ReflectionUtils.GetAllTypes(typeof(NodeBase)).ToArray();
@@ -56,7 +56,7 @@ namespace Dash.Editor
                     if (IsHidden(type))
                         continue;
 
-                    if (CheckMultiple(type))
+                    if (CheckMultiple(p_graph, type))
                         continue;
                     
                     TooltipAttribute tooltipAttribute = type.GetCustomAttribute<TooltipAttribute>();
@@ -70,18 +70,18 @@ namespace Dash.Editor
                     
                     if (category == NodeCategoryType.GRAPH)
                     {
-                        menu.AddItem(new GUIContent(node, tooltip), false, CreateNode, type);
+                        menu.AddItem(new GUIContent(node, tooltip), false, () => CreateNode(p_graph, type));
                     }
                     else
                     {
-                        menu.AddItem(new GUIContent(categoryLabel + "/" + node, tooltip), false, CreateNode,
-                            type);
+                        menu.AddItem(new GUIContent(categoryLabel + "/" + node, tooltip), false,
+                            () => CreateNode(p_graph, type));
                     }
                 }
 
                 if (SelectionManager.HasCopiedNodes())
                 {
-                    menu.AddItem(new GUIContent("Paste Nodes"), false, PasteNodes);
+                    menu.AddItem(new GUIContent("Paste Nodes"), false, () => PasteNodes(p_graph, p_propertyTable));
                 }
                 
                 menu.AddSeparator("");
@@ -100,7 +100,7 @@ namespace Dash.Editor
                         string node = type.ToString().Substring(type.ToString().IndexOf(".") + 1);
                         node = node.Substring(0, node.Length-4);
                     
-                        menu.AddItem(new GUIContent("Create For Selected/"+node, tooltip), false, CreateAnimationNodesFromSelection, type);
+                        menu.AddItem(new GUIContent("Create For Selected/"+node, tooltip), false, () => CreateAnimationNodesFromSelection(p_graph, p_propertyTable, type));
                     }
                 }
                 
@@ -109,17 +109,15 @@ namespace Dash.Editor
             return menu;
         }
 
-        static void CreateAnimationNodesFromSelection(object p_nodeType)
+        static void CreateAnimationNodesFromSelection(DashGraph p_graph, IExposedPropertyTable p_propertyTable, object p_nodeType)
         {
             Transform[] selectedTransforms = SelectionUtils.GetTransformsFromSelection();
-            float zoom = DashEditorCore.EditorConfig.zoom;
-            Vector2 viewOffset = DashEditorCore.EditorConfig.editingGraph.viewOffset;
-            Vector2 position = new Vector2(_lastMousePosition.x * zoom - viewOffset.x, _lastMousePosition.y * zoom - viewOffset.y);
+            Vector2 position = new Vector2(_lastMousePosition.x * p_graph.zoom - p_graph.viewOffset.x, _lastMousePosition.y * p_graph.zoom - p_graph.viewOffset.y);
             Vector2 offset = Vector2.zero;
             
             foreach (Transform transform in selectedTransforms)
             {
-                NodeBase node = NodeUtils.CreateNode(DashEditorCore.EditorConfig.editingGraph, (Type)p_nodeType, position + offset);
+                NodeBase node = NodeUtils.CreateNode(p_graph, (Type)p_nodeType, position + offset);
                 
                 if (node != null)
                 {
@@ -128,7 +126,7 @@ namespace Dash.Editor
                     //model.target.SetValue(transform.name);
                     
                     model.useReference = true;
-                    IExposedPropertyTable propertyTable = DashEditorCore.EditorConfig.editingController;
+                    
                     bool isDefault = PropertyName.IsNullOrEmpty(model.targetReference.exposedName);
 
                     if (isDefault)
@@ -136,12 +134,12 @@ namespace Dash.Editor
                         PropertyName newExposedName = new PropertyName(GUID.Generate().ToString());
                         model.targetReference.exposedName = newExposedName;
                         
-                        propertyTable.SetReferenceValue(newExposedName, transform);
+                        p_propertyTable.SetReferenceValue(newExposedName, transform);
                         //p_fieldInfo.SetValue(p_object, exposedReference);
                     }
                     else
                     {
-                        propertyTable.SetReferenceValue(model.targetReference.exposedName, transform);
+                        p_propertyTable.SetReferenceValue(model.targetReference.exposedName, transform);
                     }
                     
                     // If its bindable bind all values to current transform
@@ -156,11 +154,11 @@ namespace Dash.Editor
             }
         }
 
-        static void ShowAnimationNodeTypesMenu()
+        static void ShowAnimationNodeTypesMenu(DashGraph p_graph, IExposedPropertyTable p_propertyTable)
         {
             RuntimeGenericMenu menu = new RuntimeGenericMenu();
             
-            if (DashEditorCore.EditorConfig.editingGraph != null)
+            if (p_graph != null)
             {
                 Type[] nodeTypes = ReflectionUtils.GetAllTypes(typeof(NodeBase)).ToArray();
                 foreach (Type type in nodeTypes)
@@ -175,7 +173,7 @@ namespace Dash.Editor
                     string node = type.ToString().Substring(type.ToString().IndexOf(".") + 1);
                     node = node.Substring(0, node.Length-4);
                     
-                    menu.AddItem(new GUIContent(node, tooltip), false, CreateAnimationNodesFromSelection, type);
+                    menu.AddItem(new GUIContent(node, tooltip), false, () => CreateAnimationNodesFromSelection(p_graph, p_propertyTable, type));
                 }
             }
             
@@ -202,41 +200,38 @@ namespace Dash.Editor
             return p_type.GetCustomAttribute<ObsoleteAttribute>() != null;
         }
         
-        static bool CheckMultiple(Type p_type)
+        static bool CheckMultiple(DashGraph p_graph, Type p_type)
         {
-            if (!NodeUtils.CanHaveMultipleInstances(p_type) && DashEditorCore.EditorConfig.editingGraph.HasNodeOfType(p_type))
+            if (!NodeUtils.CanHaveMultipleInstances(p_type) && p_graph.HasNodeOfType(p_type))
                 return true;
 
             return false;
         }
 
-        static void PasteNodes()
+        static void PasteNodes(DashGraph p_graph, IExposedPropertyTable p_propertyTable)
         {
-            SelectionManager.PasteNodes(_lastMousePosition, DashEditorCore.EditorConfig.editingGraph);
+            SelectionManager.PasteNodes(p_graph, _lastMousePosition, p_propertyTable);
         }
 
-        static void CreateNode(object p_nodeType)
+        static void CreateNode(DashGraph p_graph, Type p_nodeType)
         {
             var graph = DashEditorCore.EditorConfig.editingGraph;
-            float zoom = DashEditorCore.EditorConfig.zoom;
             Vector2 offset = graph.viewOffset;
-            Vector2 position = new Vector2(_lastMousePosition.x * zoom - offset.x, _lastMousePosition.y * zoom - offset.y);
+            Vector2 position = new Vector2(_lastMousePosition.x * p_graph.zoom - offset.x, _lastMousePosition.y * p_graph.zoom - offset.y);
             
-            var node = NodeUtils.CreateNode(graph, (Type)p_nodeType, position);
+            var node = NodeUtils.CreateNode(graph, p_nodeType, position);
 
             if (SelectionManager.connectingNode != null)
             {
-                SelectionManager.EndConnectionDrag(node, 0);
+                SelectionManager.EndConnectionDrag(p_graph, node, 0);
             }
         }
         
-        static void CreateGraphNode(object p_graph)
+        static void CreateGraphNode(DashGraph p_graph, DashGraph p_subGraph)
         {
-            float zoom = DashEditorCore.EditorConfig.zoom;
-            Vector2 offset = DashEditorCore.EditorConfig.editingGraph.viewOffset;
-            Vector2 position = new Vector2(_lastMousePosition.x * zoom - offset.x, _lastMousePosition.y * zoom - offset.y);
+            Vector2 position = new Vector2(_lastMousePosition.x * p_graph.zoom - p_graph.viewOffset.x, _lastMousePosition.y * p_graph.zoom - p_graph.viewOffset.y);
             
-            SubGraphNode node = (SubGraphNode)NodeBase.Create(typeof(SubGraphNode), DashEditorCore.EditorConfig.editingGraph);
+            SubGraphNode node = (SubGraphNode)NodeBase.Create(typeof(SubGraphNode), p_graph);
 
             if (node != null)
             {
@@ -245,13 +240,14 @@ namespace Dash.Editor
             }
 
             node.Model.useAsset = true;
-            node.Model.graphAsset = (DashGraph)p_graph;
+            node.Model.graphAsset = (DashGraph)p_subGraph;
 
-            DashEditorCore.SetDirty();
+            p_graph.MarkDirty();
+            //DashEditorCore.SetDirty();
             
             if (SelectionManager.connectingNode != null)
             {
-                SelectionManager.EndConnectionDrag(node, 0);
+                SelectionManager.EndConnectionDrag(p_graph, node, 0);
             }
         }
         

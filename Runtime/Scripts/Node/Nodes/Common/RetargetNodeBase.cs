@@ -23,12 +23,10 @@ namespace Dash
         override protected void OnExecuteStart(NodeFlowData p_flowData)
         {
             Transform target = null;
-
+            
             if (!p_flowData.HasAttribute("target") && Model.isChild)
             {
-                Debug.LogWarning("Cannot retarget to a child of null in node "+_model.id);
-                hasErrorsInExecution = true;
-
+                SetError("Cannot retarget to a child of null");
                 return;
             }
 
@@ -55,19 +53,22 @@ namespace Dash
                         
                         if (value != null && value.GetType().IsGenericType && value.GetType().GetGenericTypeDefinition() == typeof(ExposedReference<>))
                         {
-                            value = (Object) value.GetType().GetMethod("Resolve")
+                            value = (Object) value.GetType().GetMethod("Resolve")?
                                 .Invoke(value, new object[] {Controller});
                         }
                     
                         target = value as Transform;
                         
-                        if (target == null && value.GetType() == typeof(GameObject))
+                        if (target == null)
                         {
-                            target = (value as GameObject).transform;
-                        } 
-                        else if (target == null && value is Component)
-                        {
-                            target = (value as Component).transform;
+                            if (value is GameObject gameObject)
+                            {
+                                target = gameObject.transform;
+                            } 
+                            else if (value is Component component)
+                            {
+                                target = component.transform;
+                            }
                         }
                     }
                     else

@@ -20,16 +20,18 @@ namespace Dash
         {
             Vector3 fromPosition = GetParameterValue<Vector3>(Model.fromPosition, p_flowData);
 
+            Vector3 targetPosition = Model.useLocalPosition ? p_target.localPosition : p_target.position;
+            
             Vector3 startPosition = Model.useFrom
                 ? Model.isFromRelative
-                    ? p_target.position + fromPosition
+                    ? targetPosition + fromPosition
                     : fromPosition
-                : p_target.position;
+                : targetPosition;
 
             if (Model.storeToAttribute)
             {
                 string attribute = GetParameterValue(Model.storeAttributeName, p_flowData);
-                p_flowData.SetAttribute<Vector3>(attribute, p_target.position);
+                p_flowData.SetAttribute<Vector3>(attribute, targetPosition);
             }
 
             Vector3 finalPosition = GetParameterValue<Vector3>(Model.toPosition, p_flowData);
@@ -63,16 +65,37 @@ namespace Dash
 
             if (Model.isToRelative)
             {
-                p_target.position =
-                    p_startPosition + new Vector3(DashTween.EaseValue(0, p_finalPosition.x, p_delta, p_easeType),
-                        DashTween.EaseValue(0, p_finalPosition.y, p_delta, p_easeType),
-                        DashTween.EaseValue(0, p_finalPosition.z, p_delta, p_easeType));
+                if (Model.useLocalPosition)
+                {
+                    p_target.localPosition =
+                        p_startPosition + new Vector3(DashTween.EaseValue(0, p_finalPosition.x, p_delta, p_easeType),
+                            DashTween.EaseValue(0, p_finalPosition.y, p_delta, p_easeType),
+                            DashTween.EaseValue(0, p_finalPosition.z, p_delta, p_easeType));
+                }
+                else
+                {
+                    p_target.position =
+                        p_startPosition + new Vector3(DashTween.EaseValue(0, p_finalPosition.x, p_delta, p_easeType),
+                            DashTween.EaseValue(0, p_finalPosition.y, p_delta, p_easeType),
+                            DashTween.EaseValue(0, p_finalPosition.z, p_delta, p_easeType));
+                }
             }
             else
             {
-                p_target.position = new Vector3(DashTween.EaseValue(p_startPosition.x, p_finalPosition.x, p_delta, p_easeType),
-                    DashTween.EaseValue(p_startPosition.y, p_finalPosition.y, p_delta, p_easeType),
-                    DashTween.EaseValue(p_startPosition.z, p_finalPosition.z, p_delta, p_easeType));
+                if (Model.useLocalPosition)
+                {
+                    p_target.localPosition = new Vector3(
+                        DashTween.EaseValue(p_startPosition.x, p_finalPosition.x, p_delta, p_easeType),
+                        DashTween.EaseValue(p_startPosition.y, p_finalPosition.y, p_delta, p_easeType),
+                        DashTween.EaseValue(p_startPosition.z, p_finalPosition.z, p_delta, p_easeType));
+                }
+                else
+                {
+                    p_target.position = new Vector3(
+                        DashTween.EaseValue(p_startPosition.x, p_finalPosition.x, p_delta, p_easeType),
+                        DashTween.EaseValue(p_startPosition.y, p_finalPosition.y, p_delta, p_easeType),
+                        DashTween.EaseValue(p_startPosition.z, p_finalPosition.z, p_delta, p_easeType));
+                }
             }
         }
     }

@@ -23,8 +23,10 @@ namespace Dash
                 if (_imagePrefab == null)
                 {
                     var go = new GameObject();
-                    Image image = go.AddComponent<Image>();
+                    go.AddComponent<Image>();
                     _imagePrefab = go.transform as RectTransform;
+
+                    UnityEngine.Object.DontDestroyOnLoad(go);
                 }
 
                 return _imagePrefab;
@@ -35,7 +37,7 @@ namespace Dash
         
         protected override void OnExecuteStart(NodeFlowData p_flowData)
         {
-            Transform target = p_flowData.GetAttribute<Transform>(NodeFlowDataReservedAttributes.TARGET);
+            Transform target = p_flowData.GetAttribute<Transform>(DashReservedParameterNames.TARGET);
 
             RectTransform spawned = null;
             bool usePooling = GetParameterValue(Model.usePooling, p_flowData);
@@ -71,10 +73,11 @@ namespace Dash
 
             image.maskable = GetParameterValue(Model.isMaskable, p_flowData);
             image.raycastTarget = GetParameterValue(Model.isRaycastTarget, p_flowData);
+            image.preserveAspect = GetParameterValue(Model.preserveAspect, p_flowData);
 
             if (Model.retargetToSpawned)
             {
-                p_flowData.SetAttribute(NodeFlowDataReservedAttributes.TARGET, spawned.transform);
+                p_flowData.SetAttribute(DashReservedParameterNames.TARGET, spawned.transform);
             }
             
             if (Model.createSpawnedAttribute)

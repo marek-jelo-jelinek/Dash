@@ -8,6 +8,17 @@ namespace Dash
 {
     public class ParameterUtils
     {
+        public static void MigrateParameter<T>(ref T p_valueFrom, ref Parameter<T> p_parameterTo)
+        {
+            if (p_parameterTo == null)
+            {
+                p_parameterTo = new Parameter<T>(default(T));
+                
+                p_parameterTo.SetValue(p_valueFrom);
+                p_parameterTo.isExpression = false;
+            }
+        }
+        
         public static void MigrateParameter<T>(ref Parameter<T> p_parameterFrom, ref Parameter<T> p_parameterTo)
         {
             if (p_parameterTo == null)
@@ -28,6 +39,11 @@ namespace Dash
                     }
                 }
             }
-        } 
+        }
+        
+        public static bool IsReservedParameter(string p_name)
+        {
+            return ReservedParameters.IsReservedParameter(p_name);
+        }
     }
 }

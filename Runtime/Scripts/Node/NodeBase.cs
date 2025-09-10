@@ -161,14 +161,21 @@ namespace Dash
             return false;
         }
 
-        protected void SetError(string p_warning = null)
+        protected void SetError(string p_message = null)
         {
-            if (!string.IsNullOrEmpty(p_warning))
+            if (!string.IsNullOrEmpty(p_message))
             {
-                Debug.LogWarning(p_warning+" on node " + _model.id);
+                DashCore.Instance.OnError?.Invoke(p_message);
+                Debug.LogWarning(p_message+" on node: " + _model.id+ " in graph: "+Graph+" running controller: "+Controller);
                 #if UNITY_EDITOR
-                DashEditorDebug.Debug(new ErrorDebugItem(p_warning));
+                DashEditorDebug.Debug(new ErrorDebugItem(p_message));
                 #endif
+            }
+            else
+            {
+                p_message = "Unknown error occured.";
+                DashCore.Instance.OnError?.Invoke(p_message);
+                Debug.LogWarning(p_message+" on node: " + _model.id+ " in graph: "+Graph+" running controller: "+Controller);
             }
             hasErrorsInExecution = true;
         }
@@ -193,6 +200,20 @@ namespace Dash
         }
         
         protected virtual void Invalidate() { }
+        
+        protected object GetUntypedParameterValue(Parameter p_parameter, NodeFlowData p_flowData = null, int p_index = 0)
+        {
+            if (p_parameter == null)
+                return null;
+            
+            object value = p_parameter.GetUntypedValue(ParameterResolver, p_flowData, p_index);
+            if (!hasErrorsInExecution && p_parameter.hasErrorInEvaluation)
+            {
+                SetError(p_parameter.errorMessage);
+            }
+            hasErrorsInExecution = hasErrorsInExecution || p_parameter.hasErrorInEvaluation;
+            return value;
+        }
         
         public T GetParameterValue<T>(Parameter<T> p_parameter, NodeFlowData p_flowData)
         {
@@ -437,10 +458,10 @@ namespace Dash
 
         internal virtual void Unselect() { }
 
-        public virtual NodeBase Clone(DashGraph p_graph)
+        public virtual NodeBase Clone(DashGraph p_graph, IExposedPropertyTable p_propertyTable)
         {
             NodeBase node = Create(GetType(), p_graph);
-            node._model = _model.Clone();
+            node._model = _model.Clone(p_propertyTable);
             node.ValidateUniqueId();
             return node;
         }
@@ -462,7 +483,7 @@ namespace Dash
             {
                 GUI.color = DashEditorCore.EditorConfig.theme.GetNodeBackgroundColorByCategory(Category);
 
-                if (!IsSynchronous() && DashEditorCore.DetailsVisible && DashEditorCore.EditorConfig.showNodeAsynchronity)
+                if (!IsSynchronous() && Graph.zoom < 2.5 && DashEditorCore.EditorConfig.showNodeAsynchronity)
                 {
                     GUI.DrawTexture(
                         new Rect(offsetRect.x + offsetRect.width - 24, offsetRect.y - 20, 20, 20),
@@ -474,7 +495,7 @@ namespace Dash
                 DrawTitle(offsetRect);
             }
 
-            if (DashEditorCore.DetailsVisible)
+            if (Graph.zoom < 2.5)
             {
                 DrawCustomGUI(offsetRect);
                 
@@ -508,7 +529,7 @@ namespace Dash
 
             Rect offsetRect = p_zoomed
                 ? new Rect(rect.x + Graph.viewOffset.x, rect.y + Graph.viewOffset.y, Size.x, Size.y)
-                : new Rect((rect.x + Graph.viewOffset.x) / DashEditorCore.EditorConfig.zoom, (rect.y + Graph.viewOffset.y) / DashEditorCore.EditorConfig.zoom, Size.x, Size.y);
+                : new Rect((rect.x + Graph.viewOffset.x) / Graph.zoom, (rect.y + Graph.viewOffset.y) / Graph.zoom, Size.x, Size.y);
             
             GUIStyle commentStyle = new GUIStyle();
             commentStyle.font = DashEditorCore.Skin.GetStyle("NodeComment").font;
@@ -651,7 +672,7 @@ namespace Dash
             {
                 GUI.color = Color.white;
                 GUIStyle style = new GUIStyle();
-                style.normal.textColor = Color.magenta;
+                style.normal.textColor = new Color(1, .5f, 0);
                 style.fontStyle = FontStyle.Bold;
                 style.fontSize = 20;
                 style.alignment = TextAnchor.UpperCenter;
@@ -751,7 +772,7 @@ namespace Dash
                 if (connectorRect.Contains(Event.current.mousePosition - new Vector2(p_rect.x, p_rect.y)))
                     GUI.color = Color.green;
 
-                if (OutputLabels != null && OutputLabels.Length > i && DashEditorCore.DetailsVisible)
+                if (OutputLabels != null && OutputLabels.Length > i && Graph.zoom < 2.5)
                 {
                     GUIStyle style = new GUIStyle();
                     style.normal.textColor = Color.white;
@@ -773,25 +794,24 @@ namespace Dash
             {
                 p_menu.AddItem(new GUIContent("Migrate to "+((INodeMigratable)this).GetMigrateType().Name), false, () => ((INodeMigratable)this).Migrate());
             }
-            
-            GetCustomContextMenu(ref p_menu);
         }
         
         protected virtual void AddCustomContextMenu(ref RuntimeGenericMenu p_menu) { }
 
-        public virtual void DrawInspector()
+        public virtual void DrawInspector(IViewOwner p_owner)
         {
-            bool invalidate = _model.DrawInspector();
+            bool invalidate = _model.DrawInspector(p_owner);
             
             if (invalidate)
             {
                 ValidateUniqueId();
                 Invalidate();
-                DashEditorCore.SetDirty();
+                Graph.MarkDirty();
+                //DashEditorCore.SetDirty();
             }
         }
 
-        public virtual void DrawInspectorControls(Rect p_rect) { }
+        public virtual void DrawInspectorControls(IViewOwner p_owner, Rect p_rect) { }
 
         public List<string> GetModelExposedGUIDs()
         {
@@ -803,7 +823,7 @@ namespace Dash
             return _model.GetExposedNodeIDs(p_properties);
         }
 
-        public virtual void SelectEditorTarget() { }
+        public virtual void SelectEditorTarget(DashController p_controller) { }
 
         internal virtual Transform ResolveNodeRetarget(Transform p_transform, NodeConnection p_connection)
         {

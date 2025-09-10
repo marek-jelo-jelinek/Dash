@@ -15,7 +15,6 @@ namespace Dash.Editor
          */
         #region PROPERTIES REGION
         protected bool _initialized = false;
-        protected float Zoom => DashEditorCore.EditorConfig.zoom;
 
         protected Rect zoomedRect;
 
@@ -58,12 +57,12 @@ namespace Dash.Editor
                 GUI.DrawTextureWithTexCoords(zoomedRect, _backgroundTexture,
                     new Rect(-Graph.viewOffset.x / _backgroundTexture.width,
                         Graph.viewOffset.y / _backgroundTexture.height,
-                        Zoom * p_rect.width / _backgroundTexture.width,
-                        Zoom * p_rect.height / _backgroundTexture.height), true);
+                        Graph.zoom * p_rect.width / _backgroundTexture.width,
+                        Graph.zoom * p_rect.height / _backgroundTexture.height), true);
                 GUI.color = Color.white;
                 
 
-                GUIScaleUtils.BeginScale(ref zoomedRect, new Vector2(p_rect.width/2, p_rect.height/2), Zoom, false, false);
+                GUIScaleUtils.BeginScale(ref zoomedRect, new Vector2(p_rect.width/2, p_rect.height/2), Graph.zoom, false, false);
                 Graph.DrawGUI(zoomedRect);
                 GUIScaleUtils.EndScale();
                 
@@ -212,8 +211,8 @@ namespace Dash.Editor
         {
             if (!p_event.isScrollWheel)
                 return;
-            
-            float zoom = DashEditorCore.EditorConfig.zoom;
+
+            float zoom = Graph.zoom;
             
             float previousZoom = zoom;
             zoom += p_event.delta.y / 12;
@@ -225,7 +224,7 @@ namespace Dash.Editor
                 Graph.viewOffset.y += (zoom - previousZoom) * p_rect.height / 2 + (p_event.mousePosition.y - p_rect.y - p_rect.height/2) * (zoom - previousZoom);
             }
 
-            DashEditorCore.EditorConfig.zoom = zoom;
+            Graph.zoom = zoom;
             DashEditorWindow.SetDirty(true);
         }
 
@@ -234,7 +233,7 @@ namespace Dash.Editor
             if (p_event.button != 0 || p_event.type != EventType.MouseDown)
                 return;
             
-            SelectionManager.EndConnectionDrag();
+            SelectionManager.EndConnectionDrag(Graph);
             GUI.FocusControl("");
             
             if (p_event.alt)
@@ -264,7 +263,8 @@ namespace Dash.Editor
                 case DraggingType.NODE_DRAG:
                 case DraggingType.BOX_DRAG:
                 case DraggingType.BOX_RESIZE:
-                    DashEditorCore.SetDirty();
+                    Graph.MarkDirty();
+                    //DashEditorCore.SetDirty();
                     break;
             }
 
@@ -278,7 +278,7 @@ namespace Dash.Editor
             if (p_event.button != 1 || p_event.type != EventType.MouseDown)
                 return;
             
-            SelectionManager.EndConnectionDrag();
+            SelectionManager.EndConnectionDrag(Graph);
             
             _rightDragStart = p_event.mousePosition;
         }
@@ -304,7 +304,7 @@ namespace Dash.Editor
             if (p_captured)
                 return;
             
-            CreateNodeContextMenu.ShowAsPopup();
+            CreateNodeContextMenu.ShowAsPopup(Graph, Controller);
         }
 
         void HandleDragRightMouseUp(Event p_event, Rect p_rect, ref bool p_captured)
@@ -327,19 +327,19 @@ namespace Dash.Editor
             switch (dragging)
             {
                 case DraggingType.CONNECTION_DRAG:
-                    var mousePosition = p_event.mousePosition * Zoom - new Vector2(p_rect.x, p_rect.y);
+                    var mousePosition = p_event.mousePosition * Graph.zoom - new Vector2(p_rect.x, p_rect.y);
                     SelectionManager.connectingPosition = mousePosition;
                     break;
                 case DraggingType.NODE_DRAG:
                     Vector2 delta = p_event.alt ? Snapping.Snap(p_event.delta, new Vector2(10,10)): p_event.delta;
-                    SelectionManager.DragSelectedNodes(delta, Graph);
+                    SelectionManager.DragSelectedNodes(Graph, delta);
                     break;
                 case DraggingType.BOX_DRAG:
                     SelectionManager.selectedBox.moveNodes = !p_event.control;
-                    SelectionManager.selectedBox.Drag(new Vector2(p_event.delta.x * Zoom, p_event.delta.y * Zoom));
+                    SelectionManager.selectedBox.Drag(new Vector2(p_event.delta.x * Graph.zoom, p_event.delta.y * Graph.zoom));
                     break;
                 case DraggingType.BOX_RESIZE:
-                    SelectionManager.selectedBox.Resize(new Vector2(p_event.delta.x * Zoom, p_event.delta.y * Zoom));
+                    SelectionManager.selectedBox.Resize(new Vector2(p_event.delta.x * Graph.zoom, p_event.delta.y * Graph.zoom));
                     break;
                 case DraggingType.SELECTION:
                     selectedRegion.width += p_event.delta.x;
@@ -347,17 +347,17 @@ namespace Dash.Editor
                     Rect fixedRect = RectUtils.FixRect(selectedRegion);
                     SelectionManager.SelectingNodes(Graph.Nodes
                         .FindAll(n =>
-                            RectUtils.IsInsideRect(n.rect, fixedRect, Graph.viewOffset.x, Graph.viewOffset.y, Zoom))
+                            RectUtils.IsInsideRect(n.rect, fixedRect, Graph.viewOffset.x, Graph.viewOffset.y, Graph.zoom))
                         .Select(n => n.Index).ToList());
                     break;
                 default:
                     if (p_event.alt || _rightDrag)
                     {
-                        Graph.viewOffset += p_event.delta * Zoom;
+                        Graph.viewOffset += p_event.delta * Graph.zoom;
                     } else if (p_event.button == 1 && (p_event.mousePosition - _rightDragStart).magnitude > 5)
                     {
                         _rightDrag = true;
-                        Graph.viewOffset += (p_event.mousePosition - _rightDragStart) * Zoom;
+                        Graph.viewOffset += (p_event.mousePosition - _rightDragStart) * Graph.zoom;
                     }
                     break;
             }
@@ -370,7 +370,7 @@ namespace Dash.Editor
             if (p_captured)
                 return;
             
-            var mousePosition = p_event.mousePosition * Zoom - new Vector2(p_rect.x, p_rect.y);
+            var mousePosition = p_event.mousePosition * Graph.zoom - new Vector2(p_rect.x, p_rect.y);
             
             NodeConnectorType connectorType;
             int connectorIndex;
@@ -388,13 +388,13 @@ namespace Dash.Editor
 
                     if (!SelectionManager.IsSelected(p_nodeIndex) && (!p_event.shift || p_nodeIndex == 0))
                     {
-                        SelectionManager.ClearSelection();
+                        SelectionManager.ClearSelection(Graph);
                     }
                     
                     if (!SelectionManager.IsSelected(p_nodeIndex))
                     {
                         SelectionManager.AddNodeToSelection(p_nodeIndex);
-                        Graph.Nodes[p_nodeIndex].SelectEditorTarget();
+                        Graph.Nodes[p_nodeIndex].SelectEditorTarget(Owner.GetConfig().editingController);
                     }
 
                     dragging = DraggingType.NODE_DRAG; 
@@ -422,10 +422,10 @@ namespace Dash.Editor
                 return;
             
             NodeBase node;
-            Graph.HitsNode(p_event.mousePosition * Zoom - new Vector2(p_rect.x, p_rect.y), out node);
+            Graph.HitsNode(p_event.mousePosition * Graph.zoom - new Vector2(p_rect.x, p_rect.y), out node);
             if (node != null)
             {
-                NodeContextMenu.Show(node);
+                NodeContextMenu.Show(Graph, node, Controller);
                 p_captured = true;
             }
         }
@@ -436,12 +436,12 @@ namespace Dash.Editor
                 return;
             
             NodeConnection hitConnection = Graph.HitsConnection(
-                p_event.mousePosition * Zoom - new Vector2(p_rect.x, p_rect.y),
+                p_event.mousePosition * Graph.zoom - new Vector2(p_rect.x, p_rect.y),
                 12);
 
             if (hitConnection != null)
             {
-                ConnectionContextMenu.Show(hitConnection);
+                ConnectionContextMenu.Show(Graph, hitConnection);
                 p_captured = true;
             }
         }
@@ -451,11 +451,11 @@ namespace Dash.Editor
             if (p_captured)
                 return;
             
-            GraphBox hitRegion = Graph.HitsBoxDrag(p_event.mousePosition * Zoom - new Vector2(p_rect.x, p_rect.y));
+            GraphBox hitRegion = Graph.HitsBoxDrag(p_event.mousePosition * Graph.zoom - new Vector2(p_rect.x, p_rect.y));
 
             if (hitRegion != null)
             {
-                BoxContextMenu.Show(hitRegion);
+                BoxContextMenu.Show(Graph, hitRegion);
                 p_captured = true;
             }
         }
@@ -465,7 +465,7 @@ namespace Dash.Editor
             if (p_captured)
                 return;
             
-            var mousePosition = p_event.mousePosition * Zoom - new Vector2(p_rect.x, p_rect.y);
+            var mousePosition = p_event.mousePosition * Graph.zoom - new Vector2(p_rect.x, p_rect.y);
             
             GraphBox box = Graph.HitsBoxDrag(mousePosition);
             if (box != null)
@@ -477,7 +477,7 @@ namespace Dash.Editor
             }
             
             
-            box = Graph.HitsBoxResize(p_event.mousePosition * Zoom - new Vector2(p_rect.x, p_rect.y));
+            box = Graph.HitsBoxResize(p_event.mousePosition * Graph.zoom - new Vector2(p_rect.x, p_rect.y));
             if (box != null)
             {
                 SelectionManager.selectedBox = box;
@@ -489,7 +489,7 @@ namespace Dash.Editor
 
         void HandleConnectionMouseLeftUp(Event p_event, Rect p_rect)
         {
-            var mousePosition = p_event.mousePosition * Zoom - new Vector2(p_rect.x, p_rect.y);
+            var mousePosition = p_event.mousePosition * Graph.zoom - new Vector2(p_rect.x, p_rect.y);
             NodeConnectorType connectorType;
             int connectorIndex;
             NodeBase node;
@@ -498,16 +498,16 @@ namespace Dash.Editor
             {
                 if (SelectionManager.connectingType != connectorType || node.GetType() == typeof(ConnectorNode))
                 {
-                    SelectionManager.EndConnectionDrag(node, connectorIndex);
+                    SelectionManager.EndConnectionDrag(Graph, node, connectorIndex);
                 }
             }
             else
             {
                 //SelectionManager.EndConnection();
-                CreateNodeContextMenu.ShowAsPopup();
+                CreateNodeContextMenu.ShowAsPopup(Graph, Controller);
             }
             
-            SelectionManager.EndConnectionDrag();
+            SelectionManager.EndConnectionDrag(Graph);
         }
         #endregion
     }

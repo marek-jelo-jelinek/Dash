@@ -75,8 +75,12 @@ namespace Dash
             {
                 if (!Application.isPlaying)
                 {
-                    GetComponent<IVariables>()?.Initialize(this);
-                    return GetComponent<IVariables>();
+                    IVariables variables = GetComponent<IVariables>();
+                    if (variables != null)
+                    {
+                        variables.Initialize(this);
+                    }
+                    return variables;
                 }
                 else
                 {
@@ -135,7 +139,8 @@ namespace Dash
 
             Core.Bind(this);
 
-            _variables = GetComponent<DashVariablesController>()?.Variables;
+            DashVariablesController dvc = GetComponent<DashVariablesController>();
+            if (dvc != null) _variables = dvc.Variables;
 
             _initialized = true;
         }
@@ -232,12 +237,12 @@ namespace Dash
 
             p_flowData = p_flowData == null ? NodeFlowDataFactory.Create(GetTarget()) : p_flowData.Clone();
 
-            if (!p_flowData.HasAttribute(NodeFlowDataReservedAttributes.TARGET))
+            if (!p_flowData.HasAttribute(DashReservedParameterNames.TARGET))
             {
-                p_flowData.SetAttribute(NodeFlowDataReservedAttributes.TARGET, GetTarget());
+                p_flowData.SetAttribute(DashReservedParameterNames.TARGET, GetTarget());
             }
             
-            p_flowData.SetAttribute(NodeFlowDataReservedAttributes.EVENT, p_name);
+            p_flowData.SetAttribute(DashReservedParameterNames.EVENT, p_name);
 
             Graph.SendEvent(p_name, p_flowData);
         }

@@ -314,7 +314,10 @@ namespace Dash
             _type = DebugItemType.CONTROLLER;
             _subType = p_type;
             _controller = p_controller;
-            _controllerName = p_controller?.name;
+            if (_controller != null)
+            {
+                _controllerName = _controller.name;
+            }
         }
 
         public override void DrawCustom()

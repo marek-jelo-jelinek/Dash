@@ -115,7 +115,7 @@ namespace Dash
         }
 
 #if UNITY_EDITOR
-        public override Vector2 Size => new Vector2(150, 85 + (InputCount > 2 ? (InputCount - 2) * 25 : 0));
+        public override Vector2 Size => new Vector2(150, 85 + (InputCount > 2 ? (InputCount - 2) * 28 : 0));
         
         protected override void DrawCustomGUI(Rect p_rect)
         {

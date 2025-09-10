@@ -2,9 +2,142 @@
 
 All notable changes to this project will be documented in this file.
 
-## RELEASE CANDIDATES
+## RELEASES
 
-### Release 0.14.3 - X.3.2023
+### Release 0.14.16 - 14.08.2025
+
+#### Changed
+
+- changed Image prefabs in SpawnUIImage are now DontDestoyOnLoad
+
+### Release 0.14.15 - 11.08.2025
+
+#### Added
+
+- added useLocalPosition for AnimatePosition
+
+### Release 0.14.14 - 01.04.2025
+
+#### Fixed
+
+- wrong parameter type fetching in AnimateText
+
+### Release 0.14.13 - 31.3.2025
+
+#### Added
+
+- preserveAspect to SpawnImage
+- alpha only mode for AnimateText when targeting TextMeshPro
+
+#### Fixed
+
+- fixed and removed old compatibilty dependencies in SpawnUIPrefab
+- fixed handling null check for node visualisation in SpawnUIPrefab
+
+### Release 0.14.12 - 25.1.2025
+
+#### Added
+
+- more sanity checks for additional potential error resolving
+
+### Release 0.14.11 - 13.1.2025
+
+#### Added
+
+- added OnError action callback for error catching on DashCore
+
+### Release 0.14.10 - 11.1.2025
+
+#### Changed
+
+- error logging for nodes especially retargeting nodes to add graph and controller info on top of node info
+
+### Release 0.14.9 - 23.9.2024
+
+#### Changed
+
+- upped dependencie on latest Odin Serializer 2024.2.15
+
+#### Fixed
+
+- switched to full null check to adhere to Unity overrides
+>>>>>>> df58b4aa8194bb7c8dbbe2af6e63f78fbde13fc6
+
+### Release 0.14.8 - 24.4.2024
+
+#### Added
+
+#### Changed
+
+#### Fixed
+
+- fixed inputs rendering for Accumulate node
+
+### Release 0.14.7 - 23.3.2024
+
+#### Added
+
+#### Changed
+
+#### Fixed
+
+- fixed node search functionality and UI
+- fixed IViewOwner editor only compilation
+
+### Release 0.14.6 - 3.1.2024
+
+#### Added
+
+- added SetVariable overload for non generic version of setting of existing variables.
+- added graph utility functions HasInputOfName, HasOutputOfName, HasOnCustomEventOfName
+- added migration utility for Parameters from value
+- added RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration) handling for EDITOR only of statics to clear state preservance without domain reload
+
+#### Changed
+
+- changed DashEditorConfig now moved to Assets/Editor/Resources instead of Assets/Resources/Editor
+- changed CreateAttributeNode now highlights attributes with non expression names that collide with reserved names
+- changed SubGraphs and SubGraph node are no longer experimental, big hurray! 
+- changed Input/OutputNode now cannot have whitespace in name [WARNING]
+- changed new attribute DisallowWhitespace that are used for any property that shouldn't contain whitespace
+- changed usage of different input textfields for various GUI elements
+- changed a lot of refactoring and architecture change to avoid locked dependencies and move closer to Nodemon architecture
+- changed variable names now cannot contain whitespace are now autostripped of whitespace in renaming [WARNING]
+- changed variable inspector now shows variables that use reserved names as red to avoid them or atleast be aware that collision may occur
+- changed OnFinishedDelay is now parameter in ForLoopNode
+- changed lerping of rotation in AnimateRotation is now happening on eulers and not quaterions to handle arbitrary degrees rotations [WARNING]
+
+#### Fixed
+
+- fixed CreateAttributeNode now correctly creates a new list of attributes if there were none
+- fixed deserialization of cached empty empty graphs crashed on null exception
+- fixed ForLoopNode now correctly calculates time for reverse loops
+- fixed create for selected no longer ends in null exception
+- fixed skip serialization of Unity objects in Unity 2022 when this is null for some reason
+
+### Release 0.14.5 - 11.6.2023
+
+#### Changed
+
+- changed CreateAttributeNode refactor to be more robust
+
+#### Fixed
+
+- fixed Vector4 casting for GUI Vector4Field
+
+### Release 0.14.4 - 14.4.2023
+
+#### Changed
+
+- changed temporarily removed some parameter functions like Promote to Variable
+- changed internal handling of parameter in context menus
+- changed zoom value is now stored per graph 
+
+#### Fixed
+
+- fixed node context menu going for infinite recursion and crashing Unity editor
+
+### Release 0.14.3 - 4.4.2023
 
 #### Added
 

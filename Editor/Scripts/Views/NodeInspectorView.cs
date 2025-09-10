@@ -13,6 +13,7 @@ namespace Dash.Editor
 {
     public class NodeInspectorView : ViewBase
     {
+        public int maxHeight = 380;
         private Vector2 scrollPosition;
 
         protected object _previouslyInspected;
@@ -84,7 +85,7 @@ namespace Dash.Editor
             
             scrollPosition = GUILayout.BeginScrollView(scrollPosition, false, false);
             
-            selectedNode.DrawInspector();
+            selectedNode.DrawInspector(Owner);
 
             if (Event.current.type == EventType.Repaint)
             {
@@ -92,7 +93,7 @@ namespace Dash.Editor
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
                 var lastHeight = lastRect.y + lastRect.height;
-                lastHeight = lastHeight > 380 ? 380 : lastHeight;
+                lastHeight = lastHeight > maxHeight ? maxHeight : lastHeight;
 
                 if (lastHeight != _lastHeight)
                 {
@@ -107,7 +108,7 @@ namespace Dash.Editor
                 GUILayout.EndArea();
             }
 
-            selectedNode.DrawInspectorControls(rect);
+            selectedNode.DrawInspectorControls(Owner, rect);
             
             UseEvent(rect);
         }

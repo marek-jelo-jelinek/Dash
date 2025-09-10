@@ -15,9 +15,19 @@ namespace Dash
 {
     public class DashCore
     {
+        public static string VERSION = "0.14.14";
+        
         public DashRuntimeConfig Config { get; private set; }
         
         private static DashCore _instance = null;
+        
+#if UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+#endif
+        private static void ResetInstance()
+        {
+            _instance = null;
+        }
 
         public static DashCore Instance
         {
@@ -95,6 +105,8 @@ namespace Dash
         private DashVariables _globalVariables = new DashVariables();
 
         public DashVariables GlobalVariables => _globalVariables;
+        
+        public Action<string> OnError;
 
         public void AddGlobalVariables(DashVariables p_variables)
         {
@@ -147,7 +159,13 @@ namespace Dash
 
         public void SendEvent(string p_name, NodeFlowData p_flowData)
         {
-            _controllers.ToList().ForEach(dc => dc?.SendEvent(p_name, p_flowData));
+            _controllers.ToList().ForEach(dc =>
+            {
+                if (dc != null)
+                {
+                    dc.SendEvent(p_name, p_flowData);
+                }
+            });
             
             if (_listeners.ContainsKey(p_name))
             {
@@ -203,7 +221,7 @@ namespace Dash
         public static int GetVersionNumber()
         {
             var versionString = Instance.Config.packageVersion.IsNullOrWhitespace()
-                ? "0"
+                ? VERSION
                 : Instance.Config.packageVersion;
             
             var split = versionString.Split('.');
