@@ -116,7 +116,6 @@ namespace Dash
                                           Mathf.Abs(delta.y) > 180 || 
                                           Mathf.Abs(delta.z) > 180;
                 
-                Debug.Log(needsMultiRotation);
                 Vector3 eulers;
                 if (needsMultiRotation)
                 {
