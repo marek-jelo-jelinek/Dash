@@ -48,12 +48,14 @@ namespace Dash
                     DashTween tween = DashTween.To(Graph.Controller, 0, 1, time);
                     
                     _activeTweens.Add(tween);
+                    p_flowData.execution?.TrackTween(tween);
                     tween.OnComplete(() =>
                     {
                         _activeTweens.Remove(tween);
+                        p_flowData.execution?.UntrackTween(tween);
                         OnExecuteOutput(0, data);
                     });
-                    
+
                     tween.Start();
                 }
             }
@@ -68,12 +70,14 @@ namespace Dash
                 DashTween tween = DashTween.To(Graph.Controller, 0, 1, time);
                 
                 _activeTweens.Add(tween);
+                p_flowData.execution?.TrackTween(tween);
                 tween.OnComplete(() =>
                 {
                     _activeTweens.Remove(tween);
+                    p_flowData.execution?.UntrackTween(tween);
                     EndLoop(p_flowData);
                 });
-                
+
                 tween.Start();
             }
         }

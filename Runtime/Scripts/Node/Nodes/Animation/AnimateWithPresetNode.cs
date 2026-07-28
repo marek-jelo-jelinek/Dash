@@ -43,24 +43,29 @@ namespace Dash
                 ExecuteEnd(p_flowData);
             } else {
                 _activeTweens.Add(tween);
+                p_flowData.execution?.TrackTween(tween);
                 tween.OnComplete(() => ExecuteEnd(p_flowData, tween)).Start();
             }
         }
-        
+
         protected void ExecuteEnd(NodeFlowData p_flowData, DashTween p_tween = null)
         {
             if (p_tween != null)
             {
                 _activeTweens.Remove(p_tween);
+                p_flowData.execution?.UntrackTween(p_tween);
             }
 
             OnExecuteEnd(p_flowData);
             OnExecuteOutput(0,p_flowData);
         }
 
+        // Leak fix: Stop_Internal was empty, so a whole-graph stop never killed this node's preset
+        // tweens (they ran to completion and fired their flow). Kill them like the other nodes do.
         protected override void Stop_Internal()
         {
-            
+            _activeTweens?.ForEach(t => t.Kill(false));
+            _activeTweens = new List<DashTween>();
         }
     }
 }

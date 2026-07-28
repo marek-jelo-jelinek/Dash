@@ -38,9 +38,11 @@ namespace Dash
                     OnExecuteEnd(p_flowData);
                     OnExecuteOutput(0, p_flowData);
                     _activeTweens.Remove(tween);
+                    p_flowData.execution?.UntrackTween(tween);
                 });
-                
+
                 _activeTweens.Add(tween);
+                p_flowData.execution?.TrackTween(tween);
                 tween.Start();
             }
         }

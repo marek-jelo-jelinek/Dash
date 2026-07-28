@@ -87,10 +87,12 @@ namespace Dash
                         tween.OnComplete(() =>
                         {
                             _activeTweens.Remove(tween);
+                            p_flowData.execution?.UntrackTween(tween);
                             OnExecuteOutput(0, data);
                         });
                         tween.Start();
                         _activeTweens.Add(tween);
+                        p_flowData.execution?.TrackTween(tween);
                     }
                 }
 
@@ -105,10 +107,12 @@ namespace Dash
                     tween.OnComplete(() =>
                     {
                         _activeTweens.Remove(tween);
+                        p_flowData.execution?.UntrackTween(tween);
                         OnExecuteEnd(p_flowData);
                     });
                     tween.Start();
                     _activeTweens.Add(tween);
+                    p_flowData.execution?.TrackTween(tween);
                 }
             }
             else
@@ -116,6 +120,14 @@ namespace Dash
                 SetError("Zero valid retargets found");
                 OnExecuteEnd(p_flowData);
             }
+        }
+
+        // Leak fix: this node scheduled delay tweens but had no Stop_Internal, so a whole-graph
+        // stop left them running. Mirror the pattern used by the other delay-based nodes.
+        protected override void Stop_Internal()
+        {
+            _activeTweens?.ForEach(t => t.Kill(false));
+            _activeTweens = new List<DashTween>();
         }
 
         public override bool IsSynchronous()

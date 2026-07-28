@@ -528,9 +528,6 @@ namespace Dash
 
 #region INTERNAL_ACCESS
 
-        [NonSerialized]
-        private List<DashTween> _activeTweens;
-
         internal void SetParentGraph(DashGraph p_graph)
         {
             _parentGraph = p_graph;

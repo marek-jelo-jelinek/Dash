@@ -58,9 +58,11 @@ namespace Dash
                     tween.OnComplete(() =>
                     {
                         _activeTweens.Remove(tween);
+                        p_flowData.execution?.UntrackTween(tween);
                         OnExecuteOutput(0, childData);
                     });
                     _activeTweens.Add(tween);
+                    p_flowData.execution?.TrackTween(tween);
                     tween.Start();
                 }
             }
@@ -77,9 +79,11 @@ namespace Dash
                 tween.OnComplete(() =>
                 {
                     _activeTweens.Remove(tween);
+                    p_flowData.execution?.UntrackTween(tween);
                     ExecuteEnd(p_flowData);
                 });
                 _activeTweens.Add(tween);
+                p_flowData.execution?.TrackTween(tween);
                 tween.Start();
             }
         }

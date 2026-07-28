@@ -32,6 +32,12 @@ namespace Dash
         // Sum of _activeFrames values. Kept incrementally so callers do not have to walk the map.
         public int TotalFrames { get; private set; }
 
+        // Tweens this execution has in flight, across every node it is running. Phase 3 tracks
+        // these in PARALLEL with the existing per-node _activeTweens lists (which whole-graph
+        // Stop still uses); this list is what a per-execution stop will kill in Phase 4. Lazily
+        // allocated.
+        private List<DashTween> _tweens;
+
         public GraphExecution(ExecutionId p_id, DashGraph p_graph)
         {
             id = p_id;
@@ -86,6 +92,48 @@ namespace Dash
         {
             return _activeFrames != null && _activeFrames.ContainsKey(p_node);
         }
+
+        /// <summary>Registers a tween as belonging to this execution. Returns it for chaining.</summary>
+        public DashTween TrackTween(DashTween p_tween)
+        {
+            if (p_tween == null)
+                return null;
+
+            if (_tweens == null)
+                _tweens = new List<DashTween>();
+
+            _tweens.Add(p_tween);
+            return p_tween;
+        }
+
+        /// <summary>Drops a tween from this execution's list (call when it completes naturally).</summary>
+        public void UntrackTween(DashTween p_tween)
+        {
+            if (_tweens != null && p_tween != null)
+                _tweens.Remove(p_tween);
+        }
+
+        /// <summary>
+        /// Kills every tween this execution has in flight. Uses Kill(false), which runs Clean()
+        /// without firing OnComplete, so the downstream flow does NOT resume — this is teardown,
+        /// not completion. The matching per-node _activeTweens entries are cleared by the node's
+        /// own Stop_Internal during a whole-graph stop; a per-execution stop (Phase 4) will call
+        /// this instead.
+        /// </summary>
+        public void KillTweens()
+        {
+            if (_tweens == null)
+                return;
+
+            // Snapshot count; Kill(false) does not fire the node callback that would Untrack, but
+            // iterate defensively and clear at the end regardless.
+            for (int i = 0; i < _tweens.Count; i++)
+                _tweens[i]?.Kill(false);
+
+            _tweens.Clear();
+        }
+
+        public int TweenCount => _tweens == null ? 0 : _tweens.Count;
 
         public override string ToString()
         {
