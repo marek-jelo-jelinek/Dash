@@ -14,9 +14,29 @@ public class CustomNode : NodeBase<CustomNodeModel>
 {
     protected override void OnExecuteStart(NodeFlowData p_flowData)
     { 
-        OnExecuteEnd();
+        OnExecuteEnd(p_flowData);
     }
 }
+```
+
+Every execution frame opened by the node must be closed by calling OnExecuteEnd with the flow data it was started with — this attributes the frame to its execution so the flow can be stopped individually (see Documentation/ExecutionToken.md). The parameterless OnExecuteEnd() overload still compiles for backward compatibility but is obsolete: nodes using it will not participate in per-flow stop.
+
+If your node schedules DashTweens, book them through the NodeBase helpers so both node-scoped and flow-scoped stops can find them:
+```c#
+DashTween tween = DashTween.To(Graph.Controller, 0, 1, time);
+tween.OnComplete(() =>
+{
+    OnExecuteEnd(p_flowData);
+    OnExecuteOutput(0, p_flowData);
+    UntrackTween(tween, p_flowData);
+});
+TrackTween(tween, p_flowData);
+tween.Start();
+```
+
+If your node claims external state that must be released when the flow is stopped mid-flight (objects it spawned, slots it occupies), register a disposable on the execution:
+```c#
+p_flowData.execution?.RegisterDisposable(() => { /* teardown */ });
 ```
 
 Whereas the simplest custom model can be completely empty.
