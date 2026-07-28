@@ -38,7 +38,7 @@ namespace Dash
 
             var continueSelf = GetParameterValue(Model.continueSelf, p_flowData);
 
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
 
             if (continueSelf)
             {

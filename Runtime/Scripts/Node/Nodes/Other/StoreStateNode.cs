@@ -56,7 +56,7 @@ namespace Dash
                     break;
             }
 
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
             OnExecuteOutput(0,p_flowData);
         }
 

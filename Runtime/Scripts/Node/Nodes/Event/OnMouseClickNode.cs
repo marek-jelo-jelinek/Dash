@@ -34,7 +34,7 @@ namespace Dash
             p_flowData.SetAttribute("mousePosition", point);
 
             OnExecuteOutput(0, p_flowData);
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
         }
     }
 }

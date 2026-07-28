@@ -43,7 +43,7 @@ namespace Dash
                     _audioSource.PlayOneShot(Model.audioClip, volume);
             }
 
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
             OnExecuteOutput(0, p_flowData);
         }
     }

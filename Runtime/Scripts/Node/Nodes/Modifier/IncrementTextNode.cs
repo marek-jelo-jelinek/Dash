@@ -41,7 +41,7 @@ namespace Dash
             tmp.text = Model.useDotFormating ? StringUtils.GetDotFormat(value) : value.ToString();
             
             OnExecuteOutput(0, p_flowData);
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
         }
     }
 }

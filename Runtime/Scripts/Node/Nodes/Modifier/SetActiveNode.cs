@@ -21,7 +21,7 @@ namespace Dash
                 p_target.gameObject.SetActive(GetParameterValue(Model.active, p_flowData));
             }
 
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
             OnExecuteOutput(0, p_flowData);
         }
         

@@ -26,7 +26,7 @@ namespace Dash
             tmp.text = GetParameterValue(Model.text, p_flowData);
             
             OnExecuteOutput(0, p_flowData);
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
         }
     }
 }

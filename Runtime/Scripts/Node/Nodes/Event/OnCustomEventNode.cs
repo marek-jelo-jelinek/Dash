@@ -33,7 +33,7 @@ namespace Dash
                     DashCore.Instance.GetOrCreateSequencer(sequencerId).StartEvent(Model.eventName, sequencerPriority, () =>
                     {
                         //Debug.Log("Sequenced OnCustomEvent: "+Model.eventName);
-                        OnExecuteEnd();
+                        OnExecuteEnd(p_flowData);
                         OnExecuteOutput(0, p_flowData);
                     });
                     return;
@@ -41,7 +41,7 @@ namespace Dash
             }
             
             //Debug.Log("OnCustomEvent: "+Model.eventName);
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
             OnExecuteOutput(0, p_flowData);
         }
 

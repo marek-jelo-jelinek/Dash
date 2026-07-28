@@ -58,7 +58,7 @@ namespace Dash
                 pair.Value.Restore(pair.Key);
             }
             
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
             OnExecuteOutput(0,p_flowData);
         }
         

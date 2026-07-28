@@ -32,7 +32,7 @@ namespace Dash
                 if (!p_flowData.HasAttribute("target") && Model.isChild)
                 {
                     SetError("Cannot retarget to a child of null");
-                    OnExecuteEnd();
+                    OnExecuteEnd(p_flowData);
 
                     return;
                 }
@@ -65,7 +65,7 @@ namespace Dash
                 if (transforms.Count == 0)
                 {
                     SetError("Zero valid retargets found");
-                    OnExecuteEnd();
+                    OnExecuteEnd(p_flowData);
 
                     return;
                 }
@@ -96,7 +96,7 @@ namespace Dash
 
                 if (Model.delay.GetValue(ParameterResolver) == 0)
                 {
-                    OnExecuteEnd();
+                    OnExecuteEnd(p_flowData);
                 }
                 else
                 {
@@ -105,7 +105,7 @@ namespace Dash
                     tween.OnComplete(() =>
                     {
                         _activeTweens.Remove(tween);
-                        OnExecuteEnd();
+                        OnExecuteEnd(p_flowData);
                     });
                     tween.Start();
                     _activeTweens.Add(tween);
@@ -114,7 +114,7 @@ namespace Dash
             else
             {
                 SetError("Zero valid retargets found");
-                OnExecuteEnd();
+                OnExecuteEnd(p_flowData);
             }
         }
 

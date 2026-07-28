@@ -15,7 +15,7 @@ namespace Dash
     {
         protected override void OnExecuteStart(NodeFlowData p_flowData)
         {
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
             OnExecuteOutput(0, p_flowData);
         }
     }

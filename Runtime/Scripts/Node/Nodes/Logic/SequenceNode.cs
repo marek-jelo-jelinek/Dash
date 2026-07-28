@@ -30,7 +30,7 @@ namespace Dash
 
         protected override void OnExecuteStart(NodeFlowData p_flowData)
         {
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
             
             for (int i = 0; i < OutputCount; i++)
             {

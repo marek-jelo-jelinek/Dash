@@ -24,7 +24,7 @@ namespace Dash
                 DashCore.Instance.GetOrCreateSequencer(sequencerId).EndEvent(eventName);
             }
             
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
             OnExecuteOutput(0, p_flowData);
         }
     }

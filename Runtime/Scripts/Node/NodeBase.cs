@@ -105,6 +105,13 @@ namespace Dash
             if (p_flowData != null && p_flowData.execution == null && _graph != null)
                 p_flowData.execution = _graph.CreateExecution();
 
+            // Mirror the node-level count onto the owning execution's per-node frame map. The clone
+            // handed to OnExecuteStart shares this same execution reference, so the matching
+            // OnExecuteEnd(flowData) closes the frame on the same object. Kept in lockstep with
+            // ExecutionCount (same increment site, same error guard on the way out).
+            if (p_flowData != null)
+                p_flowData.execution?.EnterNode(this);
+
 #if UNITY_EDITOR
             if (!HasDebugOverride)
             {
@@ -128,6 +135,20 @@ namespace Dash
             }
         }
         
+        protected void OnExecuteEnd(NodeFlowData p_flowData)
+        {
+            if (!hasErrorsInExecution)
+            {
+                ExecutionCount--;
+                p_flowData?.execution?.ExitNode(this);
+            }
+        }
+
+        // Legacy overload for third-party nodes compiled against the old signature. It can only
+        // touch the node-level count — with no flow data it cannot attribute the frame to an
+        // execution, so such nodes will not participate in per-execution stop/teardown. All
+        // built-in nodes call OnExecuteEnd(NodeFlowData).
+        [Obsolete("Use OnExecuteEnd(NodeFlowData p_flowData) so the frame can be attributed to its execution.")]
         protected void OnExecuteEnd()
         {
             if (!hasErrorsInExecution)

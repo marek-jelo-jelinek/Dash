@@ -74,7 +74,7 @@ namespace Dash
 
             _executedInputsCount++;
 
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
 
             if (_accumulated && !GetParameterValue(Model.repeatAccumulation, p_flowData))
                 return;

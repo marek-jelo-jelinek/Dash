@@ -17,12 +17,12 @@ namespace Dash
         {
             if (GetParameterValue(Model.expression, p_flowData))
             {
-                OnExecuteEnd();
+                OnExecuteEnd(p_flowData);
                 OnExecuteOutput(0,p_flowData);
             }
             else
             {
-                OnExecuteEnd();
+                OnExecuteEnd(p_flowData);
                 OnExecuteOutput(1,p_flowData);
             }
         }

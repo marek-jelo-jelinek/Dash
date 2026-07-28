@@ -26,7 +26,7 @@ namespace Dash
 
             if (time == 0)
             {
-                OnExecuteEnd();
+                OnExecuteEnd(p_flowData);
                 OnExecuteOutput(0, p_flowData);
             }
             else
@@ -35,7 +35,7 @@ namespace Dash
                 
                 tween.OnComplete(() =>
                 {
-                    OnExecuteEnd();
+                    OnExecuteEnd(p_flowData);
                     OnExecuteOutput(0, p_flowData);
                     _activeTweens.Remove(tween);
                 });

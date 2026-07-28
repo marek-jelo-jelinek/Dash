@@ -113,7 +113,7 @@ namespace Dash
 
         protected void ExecuteEnd(int p_outputIndex, NodeFlowData p_flowData)
         {
-            OnExecuteEnd();
+            OnExecuteEnd(p_flowData);
             OnExecuteOutput(p_outputIndex, p_flowData);
         }
         
