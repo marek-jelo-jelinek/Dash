@@ -39,11 +39,76 @@ namespace Dash
         internal void Stop()
         {
             Stop_Internal();
-            
+
+            KillActiveTweens();
+
             ExecutionCount = 0;
         }
 
         protected virtual void Stop_Internal() { }
+
+        // ---- Tween tracking -------------------------------------------------------------------
+        // One list per node (all flows), consolidated here from six per-node copies. Each tween is
+        // double-booked: on this node (so node-scoped stops can kill it) and on the flow's
+        // GraphExecution (so per-flow stops can kill it and prune it from this list).
+
+        [NonSerialized]
+        protected List<DashTween> _activeTweens;
+
+        /// <summary>Books a tween on this node and on the flow's execution. Returns it for chaining.</summary>
+        protected DashTween TrackTween(DashTween p_tween, NodeFlowData p_flowData)
+        {
+            if (p_tween == null)
+                return null;
+
+            if (_activeTweens == null)
+                _activeTweens = new List<DashTween>();
+
+            _activeTweens.Add(p_tween);
+            p_flowData?.execution?.TrackTween(this, p_tween);
+
+            return p_tween;
+        }
+
+        /// <summary>Removes both bookings; call when a tween completes naturally.</summary>
+        protected void UntrackTween(DashTween p_tween, NodeFlowData p_flowData)
+        {
+            _activeTweens?.Remove(p_tween);
+            p_flowData?.execution?.UntrackTween(p_tween);
+        }
+
+        // Node-list prune used by GraphExecution when it kills a flow's tweens, so no stale
+        // reference outlives the kill (killed tweens are pooled and reused).
+        internal void RemoveActiveTween(DashTween p_tween)
+        {
+            _activeTweens?.Remove(p_tween);
+        }
+
+        // Kills every tween on this node regardless of flow. The whole-node stop path.
+        private void KillActiveTweens()
+        {
+            if (_activeTweens == null)
+                return;
+
+            _activeTweens.ForEach(t => t.Kill(false));
+            _activeTweens.Clear();
+        }
+
+        /// <summary>
+        /// killOnNullEncounter path: the animated target died mid-tween, so kill this node's tweens
+        /// for the CURRENT flow only — concurrent flows animating live targets on this same node
+        /// keep running. Falls back to a whole-node kill when the flow has no execution (editor
+        /// preview drives AnimateOnTarget directly).
+        /// </summary>
+        protected void KillFlowTweens(NodeFlowData p_flowData)
+        {
+            GraphExecution execution = p_flowData?.execution;
+
+            if (execution != null)
+                execution.KillTweens(this);
+            else
+                KillActiveTweens();
+        }
 
         [SerializeField]
         internal NodeModelBase _model;

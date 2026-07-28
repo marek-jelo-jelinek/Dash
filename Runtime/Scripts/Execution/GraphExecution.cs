@@ -38,11 +38,17 @@ namespace Dash
         // fresh GraphExecution, so there is nothing to reset.
         public bool IsStopped { get; private set; }
 
-        // Tweens this execution has in flight, across every node it is running. Phase 3 tracks
-        // these in PARALLEL with the existing per-node _activeTweens lists (which whole-graph
-        // Stop still uses); this list is what a per-execution stop will kill in Phase 4. Lazily
-        // allocated.
-        private List<DashTween> _tweens;
+        // Tweens this execution has in flight, with the node that scheduled each one. Owner is
+        // needed so a per-flow kill can also prune the owning node's _activeTweens list — killed
+        // tweens return to DashTween's pool and get reused, so a stale node-list entry would let a
+        // later node-scoped stop kill an unrelated flow's recycled tween. Lazily allocated.
+        private struct TrackedTween
+        {
+            public NodeBase owner;
+            public DashTween tween;
+        }
+
+        private List<TrackedTween> _tweens;
 
         public GraphExecution(ExecutionId p_id, DashGraph p_graph)
         {
@@ -99,44 +105,76 @@ namespace Dash
             return _activeFrames != null && _activeFrames.ContainsKey(p_node);
         }
 
-        /// <summary>Registers a tween as belonging to this execution. Returns it for chaining.</summary>
-        public DashTween TrackTween(DashTween p_tween)
+        /// <summary>Registers a tween as belonging to this execution, owned by p_owner. Returns it for chaining.</summary>
+        public DashTween TrackTween(NodeBase p_owner, DashTween p_tween)
         {
             if (p_tween == null)
                 return null;
 
             if (_tweens == null)
-                _tweens = new List<DashTween>();
+                _tweens = new List<TrackedTween>();
 
-            _tweens.Add(p_tween);
+            _tweens.Add(new TrackedTween { owner = p_owner, tween = p_tween });
             return p_tween;
         }
 
         /// <summary>Drops a tween from this execution's list (call when it completes naturally).</summary>
         public void UntrackTween(DashTween p_tween)
         {
-            if (_tweens != null && p_tween != null)
-                _tweens.Remove(p_tween);
+            if (_tweens == null || p_tween == null)
+                return;
+
+            for (int i = 0; i < _tweens.Count; i++)
+            {
+                if (_tweens[i].tween == p_tween)
+                {
+                    _tweens.RemoveAt(i);
+                    return;
+                }
+            }
         }
 
         /// <summary>
         /// Kills every tween this execution has in flight. Uses Kill(false), which runs Clean()
         /// without firing OnComplete, so the downstream flow does NOT resume — this is teardown,
-        /// not completion. The matching per-node _activeTweens entries are cleared by the node's
-        /// own Stop_Internal during a whole-graph stop; a per-execution stop (Phase 4) will call
-        /// this instead.
+        /// not completion. Also prunes each tween from its owner node's list so no stale reference
+        /// survives to poison a later node-scoped stop after the tween instance is pooled/reused.
         /// </summary>
         public void KillTweens()
         {
             if (_tweens == null)
                 return;
 
-            // Snapshot count; Kill(false) does not fire the node callback that would Untrack, but
-            // iterate defensively and clear at the end regardless.
             for (int i = 0; i < _tweens.Count; i++)
-                _tweens[i]?.Kill(false);
+            {
+                TrackedTween tracked = _tweens[i];
+                tracked.tween?.Kill(false);
+                tracked.owner?.RemoveActiveTween(tracked.tween);
+            }
 
             _tweens.Clear();
+        }
+
+        /// <summary>
+        /// Kills only the tweens p_node scheduled on this execution, leaving the rest of the flow
+        /// running. Used by killOnNullEncounter: the animated target died, so this node's animation
+        /// for THIS flow stops — without touching other flows on the node or other nodes of the flow.
+        /// </summary>
+        public void KillTweens(NodeBase p_node)
+        {
+            if (_tweens == null || p_node == null)
+                return;
+
+            for (int i = _tweens.Count - 1; i >= 0; i--)
+            {
+                TrackedTween tracked = _tweens[i];
+                if (tracked.owner != p_node)
+                    continue;
+
+                tracked.tween?.Kill(false);
+                p_node.RemoveActiveTween(tracked.tween);
+                _tweens.RemoveAt(i);
+            }
         }
 
         public int TweenCount => _tweens == null ? 0 : _tweens.Count;

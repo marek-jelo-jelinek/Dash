@@ -116,7 +116,7 @@ namespace Dash
             if (p_target == null)
             {
                 if (Model.killOnNullEncounter)
-                    Stop_Internal();
+                    KillFlowTweens(p_flowData);
                 return;
             }
 
@@ -146,7 +146,7 @@ namespace Dash
             if (p_target == null)
             {
                 if (Model.killOnNullEncounter)
-                    Stop_Internal();
+                    KillFlowTweens(p_flowData);
                 
                 return;
             }

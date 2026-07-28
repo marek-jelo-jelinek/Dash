@@ -17,13 +17,8 @@ namespace Dash
     [OutputLabels("OnChild", "OnFinished")]
     public class RetargetToChildrenNode : RetargetNodeBase<RetargetToChildrenNodeModel>
     {
-        [NonSerialized] 
-        protected List<DashTween> _activeTweens;
-        
         protected override void ExecuteOnTarget(Transform p_target, NodeFlowData p_flowData)
         {
-            if (_activeTweens == null) _activeTweens = new List<DashTween>();
-            
             if (p_target == null)
             {
                 ExecuteEnd(p_flowData);
@@ -57,12 +52,10 @@ namespace Dash
                     DashTween tween = DashTween.To(Graph.Controller, 0, 1, time);
                     tween.OnComplete(() =>
                     {
-                        _activeTweens.Remove(tween);
-                        p_flowData.execution?.UntrackTween(tween);
+                        UntrackTween(tween, p_flowData);
                         OnExecuteOutput(0, childData);
                     });
-                    _activeTweens.Add(tween);
-                    p_flowData.execution?.TrackTween(tween);
+                    TrackTween(tween, p_flowData);
                     tween.Start();
                 }
             }
@@ -78,22 +71,14 @@ namespace Dash
                 DashTween tween = DashTween.To(Graph.Controller, 0, 1, time);
                 tween.OnComplete(() =>
                 {
-                    _activeTweens.Remove(tween);
-                    p_flowData.execution?.UntrackTween(tween);
+                    UntrackTween(tween, p_flowData);
                     ExecuteEnd(p_flowData);
                 });
-                _activeTweens.Add(tween);
-                p_flowData.execution?.TrackTween(tween);
+                TrackTween(tween, p_flowData);
                 tween.Start();
             }
         }
-        
-        protected override void Stop_Internal()
-        {
-            _activeTweens?.ForEach(t => t.Kill(false));
-            _activeTweens = new List<DashTween>();
-        }
-            
+
         public override bool IsSynchronous()
         {
             // Should never be null but due to serialization change we need to check for now

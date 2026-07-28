@@ -17,13 +17,8 @@ namespace Dash
     [Size(160,85)]
     public class RetargetAdvancedNode : NodeBase<RetargetAdvancedNodeModel>
     {
-        [NonSerialized]
-        protected List<DashTween> _activeTweens;
-        
         override protected void OnExecuteStart(NodeFlowData p_flowData)
         {
-            if (_activeTweens == null) _activeTweens = new List<DashTween>();
-            
             List<Transform> transforms = new List<Transform>();
             Transform transform;
             
@@ -86,13 +81,11 @@ namespace Dash
                         DashTween tween = DashTween.To(Graph.Controller, 0, 1, time);
                         tween.OnComplete(() =>
                         {
-                            _activeTweens.Remove(tween);
-                            p_flowData.execution?.UntrackTween(tween);
+                            UntrackTween(tween, p_flowData);
                             OnExecuteOutput(0, data);
                         });
                         tween.Start();
-                        _activeTweens.Add(tween);
-                        p_flowData.execution?.TrackTween(tween);
+                        TrackTween(tween, p_flowData);
                     }
                 }
 
@@ -106,13 +99,11 @@ namespace Dash
                     DashTween tween = DashTween.To(Graph.Controller, 0, 1, time);
                     tween.OnComplete(() =>
                     {
-                        _activeTweens.Remove(tween);
-                        p_flowData.execution?.UntrackTween(tween);
+                        UntrackTween(tween, p_flowData);
                         OnExecuteEnd(p_flowData);
                     });
                     tween.Start();
-                    _activeTweens.Add(tween);
-                    p_flowData.execution?.TrackTween(tween);
+                    TrackTween(tween, p_flowData);
                 }
             }
             else
@@ -120,14 +111,6 @@ namespace Dash
                 SetError("Zero valid retargets found");
                 OnExecuteEnd(p_flowData);
             }
-        }
-
-        // Leak fix: this node scheduled delay tweens but had no Stop_Internal, so a whole-graph
-        // stop left them running. Mirror the pattern used by the other delay-based nodes.
-        protected override void Stop_Internal()
-        {
-            _activeTweens?.ForEach(t => t.Kill(false));
-            _activeTweens = new List<DashTween>();
         }
 
         public override bool IsSynchronous()

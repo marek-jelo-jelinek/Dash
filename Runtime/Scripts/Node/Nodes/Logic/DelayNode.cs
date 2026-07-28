@@ -15,13 +15,8 @@ namespace Dash
     [InputCount(1)]
     public class DelayNode : NodeBase<DelayNodeModel>
     {
-        [NonSerialized]
-        protected List<DashTween> _activeTweens;
-        
         override protected void OnExecuteStart(NodeFlowData p_flowData)
         {
-            if (_activeTweens == null) _activeTweens = new List<DashTween>();
-            
             float time = GetParameterValue(Model.time, p_flowData);
 
             if (time == 0)
@@ -32,30 +27,22 @@ namespace Dash
             else
             {
                 DashTween tween = DashTween.To(Graph.Controller, 0, 1, time);
-                
+
                 tween.OnComplete(() =>
                 {
                     OnExecuteEnd(p_flowData);
                     OnExecuteOutput(0, p_flowData);
-                    _activeTweens.Remove(tween);
-                    p_flowData.execution?.UntrackTween(tween);
+                    UntrackTween(tween, p_flowData);
                 });
 
-                _activeTweens.Add(tween);
-                p_flowData.execution?.TrackTween(tween);
+                TrackTween(tween, p_flowData);
                 tween.Start();
             }
         }
-        
+
         public override bool IsSynchronous()
         {
             return !Model.time.isExpression && Model.time.GetValue(null) == 0;
-        }
-
-        protected override void Stop_Internal()
-        {
-            _activeTweens?.ForEach(t => t.Kill(false));
-            _activeTweens = new List<DashTween>();
         }
         
         #if UNITY_EDITOR

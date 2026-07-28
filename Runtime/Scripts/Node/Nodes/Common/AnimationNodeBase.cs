@@ -19,31 +19,24 @@ namespace Dash
     [InspectorHeight(380)]
     public abstract class AnimationNodeBase<T> : RetargetNodeBase<T> where T:AnimationNodeModelBase, new()
     {
-        [NonSerialized]
-        protected List<DashTween> _activeTweens;
-
         protected override void ExecuteOnTarget(Transform p_target, NodeFlowData p_flowData)
         {
-            if (_activeTweens == null) _activeTweens = new List<DashTween>();
-            
             if (p_target == null)
             {
                 ExecuteEnd(p_flowData);
                 return;
             }
-            
+
             DashTween tween = AnimateOnTarget(p_target, p_flowData);
 
             if (tween == null)
             {
                 ExecuteEnd(p_flowData);
             } else {
-                _activeTweens.Add(tween);
-                p_flowData.execution?.TrackTween(tween);
+                TrackTween(tween, p_flowData);
                 tween.OnComplete(() =>
                 {
-                    _activeTweens.Remove(tween);
-                    p_flowData.execution?.UntrackTween(tween);
+                    UntrackTween(tween, p_flowData);
                     ExecuteEnd(p_flowData);
                 }).Start();
             }
@@ -60,12 +53,6 @@ namespace Dash
         public override bool IsSynchronous()
         {
             return !Model.time.isExpression && Model.time.GetValue(null) == 0;
-        }
-        
-        protected override void Stop_Internal()
-        {
-            _activeTweens?.ForEach(t => t.Kill(false));
-            _activeTweens = new List<DashTween>();
         }
 
 #if UNITY_EDITOR

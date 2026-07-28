@@ -69,7 +69,7 @@ namespace Dash
             if (p_image == null)
             {
                 if (Model.killOnNullEncounter)
-                    Stop_Internal();
+                    KillFlowTweens(p_flowData);
                 return;
             }
 

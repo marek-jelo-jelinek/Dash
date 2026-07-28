@@ -15,13 +15,8 @@ namespace Dash
     [OutputLabels("OnIteration", "OnFinished")]
     public class ForLoopNode : NodeBase<ForLoopNodeModel>
     {
-        [NonSerialized] 
-        protected List<DashTween> _activeTweens;
-        
         protected override void OnExecuteStart(NodeFlowData p_flowData)
         {
-            if (_activeTweens == null) _activeTweens = new List<DashTween>();
-
             int firstIndex = GetParameterValue(Model.firstIndex, p_flowData);
             int lastIndex = GetParameterValue(Model.lastIndex, p_flowData);
             float onIterationDelay = GetParameterValue(Model.OnIterationDelay, p_flowData);
@@ -46,13 +41,11 @@ namespace Dash
                 {
                     float time = onIterationDelay * i;
                     DashTween tween = DashTween.To(Graph.Controller, 0, 1, time);
-                    
-                    _activeTweens.Add(tween);
-                    p_flowData.execution?.TrackTween(tween);
+
+                    TrackTween(tween, p_flowData);
                     tween.OnComplete(() =>
                     {
-                        _activeTweens.Remove(tween);
-                        p_flowData.execution?.UntrackTween(tween);
+                        UntrackTween(tween, p_flowData);
                         OnExecuteOutput(0, data);
                     });
 
@@ -68,24 +61,16 @@ namespace Dash
             {
                 float time = onFinishedDelay + onIterationDelay * Math.Abs(length);
                 DashTween tween = DashTween.To(Graph.Controller, 0, 1, time);
-                
-                _activeTweens.Add(tween);
-                p_flowData.execution?.TrackTween(tween);
+
+                TrackTween(tween, p_flowData);
                 tween.OnComplete(() =>
                 {
-                    _activeTweens.Remove(tween);
-                    p_flowData.execution?.UntrackTween(tween);
+                    UntrackTween(tween, p_flowData);
                     EndLoop(p_flowData);
                 });
 
                 tween.Start();
             }
-        }
-
-        protected override void Stop_Internal()
-        {
-            _activeTweens?.ForEach(t => t.Kill(false));
-            _activeTweens = new List<DashTween>();
         }
         
         public override bool IsSynchronous()
