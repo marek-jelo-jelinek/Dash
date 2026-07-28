@@ -490,6 +490,28 @@ namespace Dash
         {
             p_execution?.Stop();
         }
+
+        /// <summary>
+        /// Kills animation tweens on p_target across every live execution of this graph (null =
+        /// every target), with exact frame accounting — the per-target stop the 2021 refactor
+        /// removed. Flows are not stopped: branches whose animation died just end, everything else
+        /// keeps running. Returns the number of tweens killed.
+        /// </summary>
+        public int StopAnimations(Transform p_target)
+        {
+            if (_executions == null)
+                return 0;
+
+            int killed = 0;
+
+            for (int i = 0; i < _executions.Count; i++)
+            {
+                if (!_executions[i].IsStopped)
+                    killed += _executions[i].KillTweensByTarget(p_target);
+            }
+
+            return killed;
+        }
         
         private HashSet<NodeBase> _downstreamNodes = new HashSet<NodeBase>();
         

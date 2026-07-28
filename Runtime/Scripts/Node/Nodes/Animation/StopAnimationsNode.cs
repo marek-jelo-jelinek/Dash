@@ -18,14 +18,12 @@ namespace Dash
     {
         protected override void ExecuteOnTarget(Transform p_target, NodeFlowData p_flowData)
         {
-            // if (Model.allAnimations)
-            // {
-            //     ((IInternalGraphAccess)Graph).StopActiveTweens(null);
-            // }
-            // else
-            // {
-            //     ((IInternalGraphAccess) Graph).StopActiveTweens(p_target);
-            // }
+            // Restored: dead since the 2021 refactor removed StopActiveTweens. Now backed by the
+            // execution registry — kills matching animation tweens across every live flow (with
+            // exact frame accounting), including this node's own flow's other branches, which is
+            // the historical behavior. This flow's own frame is not tween-backed, so the node
+            // continues normally below.
+            Graph.StopAnimations(Model.allAnimations ? null : p_target);
 
             OnExecuteEnd(p_flowData);
             OnExecuteOutput(0, p_flowData);

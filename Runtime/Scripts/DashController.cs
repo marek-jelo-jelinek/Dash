@@ -277,6 +277,15 @@ namespace Dash
             p_execution?.Stop();
         }
 
+        /// <summary>
+        /// Kills animations on a specific target (or every target when null) across all running
+        /// flows, without stopping the flows themselves.
+        /// </summary>
+        public int StopAnimations(Transform p_target = null)
+        {
+            return Graph != null ? Graph.StopAnimations(p_target) : 0;
+        }
+
         public void AddListener(string p_name, Action<NodeFlowData> p_callback, int p_priority = 0, bool p_once = false)
         {
             Initialize();

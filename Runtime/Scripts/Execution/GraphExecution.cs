@@ -192,6 +192,51 @@ namespace Dash
 
         public int TweenCount => _tweens == null ? 0 : _tweens.Count;
 
+        /// <summary>
+        /// Kills every tween of this execution animating p_target (reference match on
+        /// DashTween.target; null matches ALL targets), closing the owning node's frame for each so
+        /// the counts stay exact — the fix over the pre-2021 per-target stop, which killed tweens
+        /// but leaked ExecutionCount forever. The killed branch simply ends (no OnComplete, no
+        /// propagation); the rest of the flow keeps running and disposables are NOT run — stopping
+        /// an animation is not stopping the flow. Returns the number of tweens killed.
+        /// </summary>
+        public int KillTweensByTarget(object p_target)
+        {
+            if (_tweens == null)
+                return 0;
+
+            int killed = 0;
+
+            for (int i = _tweens.Count - 1; i >= 0; i--)
+            {
+                TrackedTween tracked = _tweens[i];
+
+                if (tracked.tween == null || (p_target != null && !ReferenceEquals(tracked.tween.target, p_target)))
+                    continue;
+
+                tracked.tween.Kill(false);
+                tracked.owner?.RemoveActiveTween(tracked.tween);
+                _tweens.RemoveAt(i);
+                killed++;
+
+                CloseFrame(tracked.owner);
+            }
+
+            return killed;
+        }
+
+        // Closes one frame on p_node IF this execution holds one there, keeping the node-level
+        // count in lockstep. The guard makes multi-tween single-frame nodes (ForLoop et al) close
+        // their frame exactly once and protects concurrent executions' counts from over-decrement.
+        private void CloseFrame(NodeBase p_node)
+        {
+            if (p_node == null || !IsNodeActive(p_node))
+                return;
+
+            ExitNode(p_node);
+            p_node.ReleaseExecutionFrames(1);
+        }
+
         /// <summary>Builds the disposable key an OnCustomEvent sequencer claim and its EndEvent share.</summary>
         public static string GetSequencerDisposableKey(string p_sequencerId, string p_eventName)
         {
