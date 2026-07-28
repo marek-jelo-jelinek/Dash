@@ -403,21 +403,40 @@ namespace Dash
 
         public bool ExecuteGraphInput(string p_inputName, NodeFlowData p_flowData)
         {
+            return ExecuteGraphInput(p_inputName, p_flowData, out _);
+        }
+
+        /// <summary>
+        /// Runs a named input and hands back the <see cref="GraphExecution"/> that now owns the
+        /// flow, so the caller can later stop exactly that flow via DashController.Stop(execution)
+        /// or execution.Stop(). p_execution is null when no such input exists (or the flow was
+        /// started with a null flow data, which mints its execution internally).
+        /// </summary>
+        public bool ExecuteGraphInput(string p_inputName, NodeFlowData p_flowData, out GraphExecution p_execution)
+        {
+            p_execution = null;
+
             InputNode inputNode = GetNodesByType<InputNode>().Find(n => n.Model.inputName == p_inputName);
-            if (inputNode != null)
+            if (inputNode == null)
             {
-                EnsureExecution(p_flowData);
-                inputNode.Execute(p_flowData);
-                return true;
+                Debug.LogWarning("There is no input with name "+p_inputName);
+                return false;
             }
 
-            Debug.LogWarning("There is no input with name "+p_inputName);
-            return false;
+            p_execution = EnsureExecution(p_flowData);
+            inputNode.Execute(p_flowData);
+            return true;
         }
 
         public void Stop()
         {
             Nodes.ForEach(n => n.Stop());
+        }
+
+        /// <summary>Stops a single flow (see <see cref="GraphExecution.Stop"/>), not the whole graph.</summary>
+        public void Stop(GraphExecution p_execution)
+        {
+            p_execution?.Stop();
         }
         
         private HashSet<NodeBase> _downstreamNodes = new HashSet<NodeBase>();

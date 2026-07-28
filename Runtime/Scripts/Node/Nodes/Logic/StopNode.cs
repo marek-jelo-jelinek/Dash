@@ -32,6 +32,11 @@ namespace Dash
                     _stoppedNodes = new List<NodeBase>();
                     StopConnectedNodes(this);
                     break;
+                case StopMode.FLOW:
+                    // Stop only the flow running this node — kills its tweens and releases its
+                    // frames across the whole graph, leaving concurrent flows untouched.
+                    p_flowData.execution?.Stop();
+                    break;
                 default:
                     break;
             }

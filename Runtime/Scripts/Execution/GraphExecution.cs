@@ -7,17 +7,18 @@ using System.Collections.Generic;
 namespace Dash
 {
     /// <summary>
-    /// Owns the per-run state of a single graph execution — one flow entering the graph.
+    /// Owns the per-run state of a single graph execution — one flow entering the graph — so that
+    /// flow can be stopped on its own, without disturbing concurrent executions of the same shared
+    /// node objects.
     ///
-    /// Phase 1 carried identity only. Phase 2 adds the in-flight frame map: how many times each
-    /// node currently has an open execution frame belonging to THIS execution. That is the piece
-    /// that lets a later per-execution stop tear down exactly the nodes one flow is running,
-    /// without touching concurrent executions of the same shared node objects.
+    /// Carries: identity (<see cref="id"/>), an in-flight frame map (how many open frames each node
+    /// has for THIS flow), and the tweens this flow scheduled. <see cref="Stop"/> uses those to tear
+    /// the flow down. The frame map and tween list are maintained in parallel with the node-level
+    /// ExecutionCount and per-node _activeTweens lists that whole-graph stop still owns.
     ///
-    /// Later phases move the remaining per-execution state (active tweens, the error flag) and a
-    /// disposal list onto this object, and add a completion signal once every flow entry point is
-    /// bracketed (that bracket arrives with the Phase 3 tween consolidation, so completion firing
-    /// is intentionally not wired here yet).
+    /// Handed to callers by DashGraph.ExecuteGraphInput(..., out execution); a StopNode in FLOW mode
+    /// reaches its own execution through the flow data. Not yet added: an id->execution registry and
+    /// a natural-completion signal (both want a flow-entry bracket that does not exist yet).
     /// </summary>
     public class GraphExecution
     {
@@ -31,6 +32,11 @@ namespace Dash
 
         // Sum of _activeFrames values. Kept incrementally so callers do not have to walk the map.
         public int TotalFrames { get; private set; }
+
+        // Set once by Stop(). A stopped execution accepts no new frames and does not propagate;
+        // OnExecuteOutput / OnExecuteEnd check this and bail. One-way latch — a fresh flow gets a
+        // fresh GraphExecution, so there is nothing to reset.
+        public bool IsStopped { get; private set; }
 
         // Tweens this execution has in flight, across every node it is running. Phase 3 tracks
         // these in PARALLEL with the existing per-node _activeTweens lists (which whole-graph
@@ -47,7 +53,7 @@ namespace Dash
         /// <summary>Opens a frame for p_node on this execution. Mirrors NodeBase.ExecutionCount++.</summary>
         public void EnterNode(NodeBase p_node)
         {
-            if (p_node == null)
+            if (p_node == null || IsStopped)
                 return;
 
             if (_activeFrames == null)
@@ -134,6 +140,34 @@ namespace Dash
         }
 
         public int TweenCount => _tweens == null ? 0 : _tweens.Count;
+
+        /// <summary>
+        /// Tears this execution down: kills its in-flight tweens (Kill(false), so none resume),
+        /// releases every open node frame so node-level ExecutionCount / IsExecuting stay honest,
+        /// and latches IsStopped so nothing downstream keeps running. Idempotent.
+        ///
+        /// This is the per-flow counterpart to whole-graph DashGraph.Stop(): it touches only the
+        /// nodes and tweens THIS flow owns, leaving concurrent executions of the same nodes alone.
+        /// </summary>
+        public void Stop()
+        {
+            if (IsStopped)
+                return;
+
+            IsStopped = true;
+
+            KillTweens();
+
+            if (_activeFrames != null)
+            {
+                foreach (var pair in _activeFrames)
+                    pair.Key.ReleaseExecutionFrames(pair.Value);
+
+                _activeFrames.Clear();
+            }
+
+            TotalFrames = 0;
+        }
 
         public override string ToString()
         {

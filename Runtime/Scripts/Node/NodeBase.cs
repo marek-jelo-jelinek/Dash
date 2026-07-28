@@ -129,19 +129,40 @@ namespace Dash
 
         protected void OnExecuteOutput(int p_index, NodeFlowData p_flowData)
         {
-            if (!hasErrorsInExecution)
-            {
-                Graph.ExecuteNodeOutputs(this, p_index, p_flowData);
-            }
+            if (hasErrorsInExecution)
+                return;
+
+            // A stopped flow does not propagate: its async work was killed and its frames released.
+            GraphExecution execution = p_flowData?.execution;
+            if (execution != null && execution.IsStopped)
+                return;
+
+            Graph.ExecuteNodeOutputs(this, p_index, p_flowData);
         }
-        
+
         protected void OnExecuteEnd(NodeFlowData p_flowData)
         {
-            if (!hasErrorsInExecution)
-            {
-                ExecutionCount--;
-                p_flowData?.execution?.ExitNode(this);
-            }
+            if (hasErrorsInExecution)
+                return;
+
+            // A stopped execution already released every open frame in GraphExecution.Stop(), so
+            // skip accounting here to avoid double-closing this node's frame and count.
+            GraphExecution execution = p_flowData?.execution;
+            if (execution != null && execution.IsStopped)
+                return;
+
+            ExecutionCount--;
+            execution?.ExitNode(this);
+        }
+
+        // Releases p_count open frames for this node without the normal per-node end path. Called
+        // by GraphExecution.Stop() when a flow is torn down mid-flight and the frames' OnExecuteEnd
+        // will never fire, keeping ExecutionCount (editor viz / idle detection) honest.
+        internal void ReleaseExecutionFrames(int p_count)
+        {
+            ExecutionCount -= p_count;
+            if (ExecutionCount < 0)
+                ExecutionCount = 0;
         }
 
         // Legacy overload for third-party nodes compiled against the old signature. It can only

@@ -247,6 +247,36 @@ namespace Dash
             Graph.SendEvent(p_name, p_flowData);
         }
 
+        /// <summary>
+        /// Starts a named graph input and returns the flow's <see cref="GraphExecution"/> handle so
+        /// it can later be stopped individually via <see cref="Stop(GraphExecution)"/>. Returns null
+        /// if there is no graph or no such input.
+        /// </summary>
+        public GraphExecution ExecuteInput(string p_inputName, NodeFlowData p_flowData)
+        {
+            Initialize();
+
+            if (Graph == null)
+                return null;
+
+            GraphExecution execution;
+            Graph.ExecuteGraphInput(p_inputName, p_flowData, out execution);
+            return execution;
+        }
+
+        /// <summary>Stops every flow currently running in this controller's graph.</summary>
+        public void Stop()
+        {
+            if (Graph != null)
+                Graph.Stop();
+        }
+
+        /// <summary>Stops a single flow previously started on this controller, leaving others running.</summary>
+        public void Stop(GraphExecution p_execution)
+        {
+            p_execution?.Stop();
+        }
+
         public void AddListener(string p_name, Action<NodeFlowData> p_callback, int p_priority = 0, bool p_once = false)
         {
             Initialize();
