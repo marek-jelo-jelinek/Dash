@@ -10,7 +10,12 @@ namespace Dash
     public class NodeFlowData : IAttributeDataCollection
     {
         public int inputIndex = 0;
-        
+
+        // Identity of the execution this flow belongs to. Propagated by Clone() so every hop and
+        // fan-out sibling shares it. Null until a flow origin (or the NodeBase.Execute safety net)
+        // assigns one. Runtime-only; never serialized into a graph asset.
+        public GraphExecution execution;
+
         protected Dictionary<string, object> _attributes;
 
         public NodeFlowData(Dictionary<string, object> p_properties = null)
@@ -78,6 +83,7 @@ namespace Dash
         {
             var ndf = new NodeFlowData(_attributes);
             ndf.inputIndex = inputIndex;
+            ndf.execution = execution;
             return ndf;
         } 
         

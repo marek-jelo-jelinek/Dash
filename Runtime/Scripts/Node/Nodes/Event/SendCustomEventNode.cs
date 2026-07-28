@@ -23,24 +23,31 @@ namespace Dash
             bool global = GetParameterValue(Model.global, p_flowData);
             bool sendData = GetParameterValue(Model.sendData, p_flowData);
 
+            // The execution identity always propagates, even when attributes are not forwarded —
+            // sendData controls data, not identity. Without this a triggered cascade would look
+            // like an unrelated execution and escape a targeted stop.
+            NodeFlowData eventData = sendData ? p_flowData : NodeFlowDataFactory.Create();
+            if (!sendData)
+                eventData.execution = p_flowData.execution;
+
             if (global)
             {
                 #if UNITY_EDITOR
                 if (DashEditorCore.Previewer.IsPreviewing)
                 {
-                    _graph.SendEvent(eventName, sendData ? p_flowData : NodeFlowDataFactory.Create());
+                    _graph.SendEvent(eventName, eventData);
                 }
                 else
                 {
-                    DashCore.Instance.SendEvent(eventName, sendData ? p_flowData : NodeFlowDataFactory.Create());
+                    DashCore.Instance.SendEvent(eventName, eventData);
                 }
                 #else
-                DashCore.Instance.SendEvent(eventName, sendData ? p_flowData : NodeFlowDataFactory.Create());
+                DashCore.Instance.SendEvent(eventName, eventData);
                 #endif
             }
             else
             {
-                _graph.SendEvent(eventName, sendData ? p_flowData : NodeFlowDataFactory.Create());
+                _graph.SendEvent(eventName, eventData);
             }
 
             OnExecuteEnd();

@@ -98,7 +98,13 @@ namespace Dash
         public void Execute(NodeFlowData p_flowData)
         {
             ExecutionCount++;
-            
+
+            // Safety net: any flow that reaches a node without an execution identity is a genuine
+            // origin (direct Execute calls from event nodes, third-party hand-built flow data).
+            // Mint here so it propagates through the clone below and onward.
+            if (p_flowData != null && p_flowData.execution == null && _graph != null)
+                p_flowData.execution = _graph.CreateExecution();
+
 #if UNITY_EDITOR
             if (!HasDebugOverride)
             {

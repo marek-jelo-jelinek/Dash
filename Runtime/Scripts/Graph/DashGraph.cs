@@ -135,7 +135,8 @@ namespace Dash
         public void SendEvent(string p_name, NodeFlowData p_flowData)
         {
             p_flowData.SetAttribute(DashReservedParameterNames.EVENT, p_name);
-            
+            EnsureExecution(p_flowData);
+
             if (_nodeListeners.ContainsKey(p_name))
             {
                 _nodeListeners[p_name].ToList().ForEach(e =>
@@ -380,11 +381,32 @@ namespace Dash
             return graph;
         }
 
+        /// <summary>
+        /// Mints a new <see cref="GraphExecution"/> owned by this graph.
+        /// </summary>
+        public GraphExecution CreateExecution()
+        {
+            return new GraphExecution(DashCore.Instance.NextExecutionId(), this);
+        }
+
+        /// <summary>
+        /// Ensures a flow has an execution assigned, minting one if it entered without an identity.
+        /// Called at flow origins; a null flow data is a no-op (NodeBase.Execute mints instead).
+        /// </summary>
+        internal GraphExecution EnsureExecution(NodeFlowData p_flowData)
+        {
+            if (p_flowData != null && p_flowData.execution == null)
+                p_flowData.execution = CreateExecution();
+
+            return p_flowData?.execution;
+        }
+
         public bool ExecuteGraphInput(string p_inputName, NodeFlowData p_flowData)
         {
             InputNode inputNode = GetNodesByType<InputNode>().Find(n => n.Model.inputName == p_inputName);
             if (inputNode != null)
             {
+                EnsureExecution(p_flowData);
                 inputNode.Execute(p_flowData);
                 return true;
             }

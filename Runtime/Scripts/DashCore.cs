@@ -56,6 +56,18 @@ namespace Dash
 
         private IAudioManager _audioManager;
 
+        [NonSerialized]
+        private int _executionIdCounter = 0;
+
+        /// <summary>
+        /// Mints a fresh <see cref="ExecutionId"/>. Instance state, so it resets with the singleton.
+        /// </summary>
+        public ExecutionId NextExecutionId()
+        {
+            _executionIdCounter++;
+            return new ExecutionId(_executionIdCounter);
+        }
+
         public EventSequencer GetOrCreateSequencer(string p_id)
         {
             if (!_sequencers.ContainsKey(p_id))
