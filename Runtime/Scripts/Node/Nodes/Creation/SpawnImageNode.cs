@@ -57,7 +57,22 @@ namespace Dash
             {
                 spawned = GameObject.Instantiate(ImagePrefab);
             }
-            
+
+            // Teardown mirror of SpawnUIPrefabNode: interrupted flows despawn their product,
+            // completed flows keep it.
+            PrefabPool pool = usePooling ? _prefabPool : null;
+            RectTransform tracked = spawned;
+            p_flowData.execution?.RegisterDisposable(() =>
+            {
+                if (tracked == null)
+                    return;
+
+                if (pool != null)
+                    pool.Return(tracked);
+                else
+                    GameObject.Destroy(tracked.gameObject);
+            });
+
             spawned.name = Model.spawnedName;
             if (Model.setTargetAsParent)
             {

@@ -381,12 +381,46 @@ namespace Dash
             return graph;
         }
 
+        // Live executions minted by this graph instance. Lifetime rule: an execution with open
+        // frames is in flight; one at zero frames has completed (a queued/waiting flow always
+        // holds a frame on its waiting node, and hops are synchronous, so zero is never observed
+        // mid-hop from the main thread). Completed and stopped entries are pruned on each mint,
+        // bounding growth without needing a completion signal.
+        [NonSerialized]
+        private List<GraphExecution> _executions;
+
+        /// <summary>Executions of this graph instance that are currently in flight.</summary>
+        public int LiveExecutionCount
+        {
+            get
+            {
+                if (_executions == null)
+                    return 0;
+
+                int count = 0;
+                for (int i = 0; i < _executions.Count; i++)
+                {
+                    if (!_executions[i].IsStopped && _executions[i].TotalFrames > 0)
+                        count++;
+                }
+
+                return count;
+            }
+        }
+
         /// <summary>
         /// Mints a new <see cref="GraphExecution"/> owned by this graph.
         /// </summary>
         public GraphExecution CreateExecution()
         {
-            return new GraphExecution(DashCore.Instance.NextExecutionId(), this);
+            if (_executions == null)
+                _executions = new List<GraphExecution>();
+            else
+                _executions.RemoveAll(e => e.IsStopped || e.TotalFrames == 0);
+
+            GraphExecution execution = new GraphExecution(DashCore.Instance.NextExecutionId(), this);
+            _executions.Add(execution);
+            return execution;
         }
 
         /// <summary>
@@ -430,6 +464,24 @@ namespace Dash
 
         public void Stop()
         {
+            // Tear down every in-flight execution first so their disposables run — freeing
+            // sequencer slots (the historic whole-graph-stop deadlock) and despawning what
+            // interrupted flows created. Completed executions (zero frames) are dropped without
+            // disposal: their products stay. Swap the list out first — a disposal can start new
+            // flows (sequencer advance), which must land in a fresh registry.
+            if (_executions != null)
+            {
+                List<GraphExecution> executions = _executions;
+                _executions = null;
+
+                foreach (GraphExecution execution in executions)
+                {
+                    if (!execution.IsStopped && execution.TotalFrames > 0)
+                        execution.Stop();
+                }
+            }
+
+            // Node-level sweep: legacy/execution-less tweens (editor preview) and count reset.
             Nodes.ForEach(n => n.Stop());
         }
 

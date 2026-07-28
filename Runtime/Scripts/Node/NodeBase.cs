@@ -162,6 +162,13 @@ namespace Dash
 
         public void Execute(NodeFlowData p_flowData)
         {
+            // A stopped flow must not run at all — without this gate the increment below would
+            // never be matched (OnExecuteEnd bails on stopped executions) and the count would
+            // leak. Reachable via callbacks that survive a stop, e.g. a sequencer advancing into
+            // a flow stopped while it waited in the queue.
+            if (p_flowData?.execution != null && p_flowData.execution.IsStopped)
+                return;
+
             ExecutionCount++;
 
             // Safety net: any flow that reaches a node without an execution identity is a genuine

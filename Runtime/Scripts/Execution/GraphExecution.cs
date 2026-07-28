@@ -50,6 +50,19 @@ namespace Dash
 
         private List<TrackedTween> _tweens;
 
+        // Teardown actions for external state this flow claimed (a sequencer slot, a spawned
+        // object). Run in reverse registration order by Stop(); on natural completion they are
+        // simply discarded with the execution — completion is not teardown. The key lets a claim
+        // that is released naturally mid-flow (EndEventNode freeing its sequencer slot) unregister
+        // its disposable so a later Stop cannot double-release it.
+        private struct Disposable
+        {
+            public string key;
+            public System.Action dispose;
+        }
+
+        private List<Disposable> _disposables;
+
         public GraphExecution(ExecutionId p_id, DashGraph p_graph)
         {
             id = p_id;
@@ -179,6 +192,66 @@ namespace Dash
 
         public int TweenCount => _tweens == null ? 0 : _tweens.Count;
 
+        /// <summary>Builds the disposable key an OnCustomEvent sequencer claim and its EndEvent share.</summary>
+        public static string GetSequencerDisposableKey(string p_sequencerId, string p_eventName)
+        {
+            return "sequencer:" + p_sequencerId + ":" + p_eventName;
+        }
+
+        /// <summary>
+        /// Registers a teardown action run if this execution is stopped mid-flight. Pass a key when
+        /// the claim can also be released naturally (so the release site can unregister); null for
+        /// claims that only teardown touches.
+        /// </summary>
+        public void RegisterDisposable(string p_key, System.Action p_dispose)
+        {
+            if (p_dispose == null)
+                return;
+
+            if (_disposables == null)
+                _disposables = new List<Disposable>();
+
+            _disposables.Add(new Disposable { key = p_key, dispose = p_dispose });
+        }
+
+        public void RegisterDisposable(System.Action p_dispose)
+        {
+            RegisterDisposable(null, p_dispose);
+        }
+
+        /// <summary>Drops the first disposable registered under p_key (claim was released naturally).</summary>
+        public void UnregisterDisposable(string p_key)
+        {
+            if (_disposables == null || p_key == null)
+                return;
+
+            for (int i = 0; i < _disposables.Count; i++)
+            {
+                if (_disposables[i].key == p_key)
+                {
+                    _disposables.RemoveAt(i);
+                    return;
+                }
+            }
+        }
+
+        public int DisposableCount => _disposables == null ? 0 : _disposables.Count;
+
+        // Runs all disposables newest-first (teardown unwinds in reverse of acquisition) and
+        // clears the list. A disposal action may synchronously start OTHER executions (EndEvent
+        // advancing a sequencer queue) — that touches their state, not this list, so plain
+        // iteration is safe.
+        private void DisposeAll()
+        {
+            if (_disposables == null)
+                return;
+
+            for (int i = _disposables.Count - 1; i >= 0; i--)
+                _disposables[i].dispose?.Invoke();
+
+            _disposables.Clear();
+        }
+
         /// <summary>
         /// Tears this execution down: kills its in-flight tweens (Kill(false), so none resume),
         /// releases every open node frame so node-level ExecutionCount / IsExecuting stay honest,
@@ -205,6 +278,10 @@ namespace Dash
             }
 
             TotalFrames = 0;
+
+            // Last: external claims. Own state is already torn down, so a disposal that
+            // synchronously starts other flows (sequencer advance) sees a consistent world.
+            DisposeAll();
         }
 
         public override string ToString()

@@ -52,6 +52,22 @@ namespace Dash
                 spawned = GameObject.Instantiate(prefab);
             }
 
+            // Teardown: a stopped flow despawns what it spawned (return to pool / destroy). On
+            // natural completion the disposable is discarded with the execution and the spawn
+            // stays — it is the flow's product, teardown only applies to interrupted flows.
+            PrefabPool pool = usePooling ? _prefabPool : null;
+            RectTransform tracked = spawned;
+            p_flowData.execution?.RegisterDisposable(() =>
+            {
+                if (tracked == null)
+                    return;
+
+                if (pool != null)
+                    pool.Return(tracked);
+                else
+                    GameObject.Destroy(tracked.gameObject);
+            });
+
             bool setTargetAsParent = GetParameterValue(Model.setTargetAsParent, p_flowData);
             if (setTargetAsParent)
             {

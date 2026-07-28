@@ -43,6 +43,25 @@ namespace Dash
             }
         }
 
+        /// <summary>
+        /// Removes a WAITING queue entry, identified by the callback registered with StartEvent.
+        /// Returns false when no waiting entry matches — which means the event already started
+        /// running (its callback slot was nulled), so the caller should EndEvent instead. Used by
+        /// execution teardown to free a stopped flow's claim without advancing the queue.
+        /// </summary>
+        public bool CancelEvent(string p_event, Action p_callback)
+        {
+            if (p_callback == null)
+                return false;
+
+            int index = _queue.FindIndex(i => i.Item1 == p_event && i.Item2 == p_callback);
+            if (index == -1)
+                return false;
+
+            _queue.RemoveAt(index);
+            return true;
+        }
+
         public void EndEvent(string p_event)
         {
 #if UNITY_EDITOR

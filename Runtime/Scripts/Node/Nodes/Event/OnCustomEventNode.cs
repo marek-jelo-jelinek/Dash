@@ -30,12 +30,28 @@ namespace Dash
                 int sequencerPriority = GetParameterValue(Model.sequencerPriority, p_flowData);
                 if (!sequencerId.IsNullOrWhitespace())
                 {
-                    DashCore.Instance.GetOrCreateSequencer(sequencerId).StartEvent(Model.eventName, sequencerPriority, () =>
+                    EventSequencer sequencer = DashCore.Instance.GetOrCreateSequencer(sequencerId);
+                    string eventName = Model.eventName;
+
+                    Action callback = () =>
                     {
-                        //Debug.Log("Sequenced OnCustomEvent: "+Model.eventName);
                         OnExecuteEnd(p_flowData);
                         OnExecuteOutput(0, p_flowData);
-                    });
+                    };
+
+                    // Teardown for the sequencer claim: a stopped flow must free it or every later
+                    // event on this sequencer queues forever. If the flow is still WAITING its
+                    // queue entry is cancelled outright; if it already runs the slot, EndEvent
+                    // frees it and advances the queue. Unregistered by EndEventNode when the flow
+                    // releases the slot naturally.
+                    p_flowData.execution?.RegisterDisposable(
+                        GraphExecution.GetSequencerDisposableKey(sequencerId, eventName), () =>
+                        {
+                            if (!sequencer.CancelEvent(eventName, callback))
+                                sequencer.EndEvent(eventName);
+                        });
+
+                    sequencer.StartEvent(eventName, sequencerPriority, callback);
                     return;
                 }
             }

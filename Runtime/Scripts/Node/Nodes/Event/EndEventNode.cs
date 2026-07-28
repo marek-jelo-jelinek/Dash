@@ -22,8 +22,13 @@ namespace Dash
             if (!sequencerId.IsNullOrWhitespace())
             {
                 DashCore.Instance.GetOrCreateSequencer(sequencerId).EndEvent(eventName);
+
+                // The slot is released; drop the teardown registered by OnCustomEventNode so a
+                // later Stop of this flow cannot EndEvent a slot it no longer holds.
+                p_flowData.execution?.UnregisterDisposable(
+                    GraphExecution.GetSequencerDisposableKey(sequencerId, eventName));
             }
-            
+
             OnExecuteEnd(p_flowData);
             OnExecuteOutput(0, p_flowData);
         }
