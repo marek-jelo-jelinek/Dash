@@ -221,19 +221,19 @@ namespace Dash
             UpdateCallback?.Invoke();
         }
 
-        public void SendEvent(string p_name)
+        public GraphExecution SendEvent(string p_name)
         {
             Initialize();
-            
-            if (Graph != null) Graph.SendEvent(p_name, GetTarget());
+
+            return Graph != null ? Graph.SendEvent(p_name, GetTarget()) : null;
         }
 
-        public void SendEvent(string p_name, NodeFlowData p_flowData)
+        public GraphExecution SendEvent(string p_name, NodeFlowData p_flowData)
         {
             Initialize();
-            
+
             if (Graph == null || GetTarget() == null)
-                return;
+                return null;
 
             p_flowData = p_flowData == null ? NodeFlowDataFactory.Create(GetTarget()) : p_flowData.Clone();
 
@@ -241,10 +241,10 @@ namespace Dash
             {
                 p_flowData.SetAttribute(DashReservedParameterNames.TARGET, GetTarget());
             }
-            
+
             p_flowData.SetAttribute(DashReservedParameterNames.EVENT, p_name);
 
-            Graph.SendEvent(p_name, p_flowData);
+            return Graph.SendEvent(p_name, p_flowData);
         }
 
         /// <summary>
@@ -284,6 +284,30 @@ namespace Dash
         public int StopAnimations(Transform p_target = null)
         {
             return Graph != null ? Graph.StopAnimations(p_target) : 0;
+        }
+
+        /// <summary>Stops the live flow with this id. Returns false when none exists.</summary>
+        public bool Stop(ExecutionId p_id)
+        {
+            return Graph != null && Graph.Stop(p_id);
+        }
+
+        /// <summary>Stops every live flow started from the named graph input.</summary>
+        public int StopExecutionsByInput(string p_inputName)
+        {
+            return Graph != null ? Graph.StopExecutionsByInput(p_inputName) : 0;
+        }
+
+        /// <summary>Stops every live flow started by the named event.</summary>
+        public int StopExecutionsByEvent(string p_eventName)
+        {
+            return Graph != null ? Graph.StopExecutionsByEvent(p_eventName) : 0;
+        }
+
+        /// <summary>Stops every live flow whose initial target was p_target — full teardown, unlike StopAnimations.</summary>
+        public int StopExecutionsByTarget(Transform p_target)
+        {
+            return Graph != null ? Graph.StopExecutionsByTarget(p_target) : 0;
         }
 
         public void AddListener(string p_name, Action<NodeFlowData> p_callback, int p_priority = 0, bool p_once = false)

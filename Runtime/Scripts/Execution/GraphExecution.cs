@@ -3,6 +3,7 @@
  */
 
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Dash
 {
@@ -24,6 +25,24 @@ namespace Dash
     {
         public readonly ExecutionId id;
         public readonly DashGraph graph;
+
+        // Where this flow came from — stamped once at mint time, never overwritten (a flow that
+        // arrives carrying an execution keeps its original origin through events and subgraphs).
+        // originTarget is the flow's TARGET at start; later retargeting does not change it. These
+        // make executions addressable without callers holding handles: stop-by-input, -event,
+        // -target on DashGraph query the registry against them.
+        public ExecutionOriginType OriginType { get; private set; }
+        public string OriginName { get; private set; }
+        public Transform OriginTarget { get; private set; }
+
+        internal void SetOrigin(ExecutionOriginType p_type, string p_name, NodeFlowData p_flowData)
+        {
+            OriginType = p_type;
+            OriginName = p_name;
+
+            if (p_flowData != null && p_flowData.HasAttribute(DashReservedParameterNames.TARGET))
+                OriginTarget = p_flowData.GetAttribute(DashReservedParameterNames.TARGET) as Transform;
+        }
 
         // node -> number of open frames this execution currently has on that node. Entries are
         // removed when they hit zero, so ContainsKey answers "is this node running for me". Lazily
@@ -331,7 +350,11 @@ namespace Dash
 
         public override string ToString()
         {
-            return id + " on " + (graph == null ? "<null>" : graph.name);
+            string origin = OriginType == ExecutionOriginType.NONE
+                ? ""
+                : " from " + OriginType.ToString().ToLower() + " '" + OriginName + "'";
+
+            return id + " on " + (graph == null ? "<null>" : graph.name) + origin;
         }
     }
 }

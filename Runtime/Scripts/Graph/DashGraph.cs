@@ -125,17 +125,24 @@ namespace Dash
             _initialized = true;
         }
 
-        public void SendEvent(string p_name, Transform p_target)
+        public GraphExecution SendEvent(string p_name, Transform p_target)
         {
             NodeFlowData flowData = new NodeFlowData();
             flowData.SetAttribute(DashReservedParameterNames.TARGET, p_target);
 
-            SendEvent(p_name, flowData);
+            return SendEvent(p_name, flowData);
         }
-        public void SendEvent(string p_name, NodeFlowData p_flowData)
+
+        /// <summary>
+        /// Sends an event into this graph and returns the flow's <see cref="GraphExecution"/> so
+        /// the triggered cascade can be stopped like any other flow. All listeners of one send
+        /// share the one execution. When the flow data already carries an execution (an in-graph
+        /// resend), that original execution is returned.
+        /// </summary>
+        public GraphExecution SendEvent(string p_name, NodeFlowData p_flowData)
         {
             p_flowData.SetAttribute(DashReservedParameterNames.EVENT, p_name);
-            EnsureExecution(p_flowData);
+            GraphExecution execution = EnsureExecution(p_flowData, ExecutionOriginType.EVENT, p_name);
 
             if (_nodeListeners.ContainsKey(p_name))
             {
@@ -154,6 +161,8 @@ namespace Dash
                     c.Invoke(p_flowData);
                 });
             }
+
+            return execution;
         }
 
         public void AddListener(string p_name, NodeBase p_node, int p_priority = 0, bool p_once = false)
@@ -425,12 +434,18 @@ namespace Dash
 
         /// <summary>
         /// Ensures a flow has an execution assigned, minting one if it entered without an identity.
-        /// Called at flow origins; a null flow data is a no-op (NodeBase.Execute mints instead).
+        /// The origin is stamped ONLY on mint — a flow arriving with an execution keeps its
+        /// original origin. Called at flow origins; a null flow data is a no-op (NodeBase.Execute
+        /// mints instead).
         /// </summary>
-        internal GraphExecution EnsureExecution(NodeFlowData p_flowData)
+        internal GraphExecution EnsureExecution(NodeFlowData p_flowData,
+            ExecutionOriginType p_originType = ExecutionOriginType.NONE, string p_originName = null)
         {
             if (p_flowData != null && p_flowData.execution == null)
+            {
                 p_flowData.execution = CreateExecution();
+                p_flowData.execution.SetOrigin(p_originType, p_originName, p_flowData);
+            }
 
             return p_flowData?.execution;
         }
@@ -457,7 +472,7 @@ namespace Dash
                 return false;
             }
 
-            p_execution = EnsureExecution(p_flowData);
+            p_execution = EnsureExecution(p_flowData, ExecutionOriginType.INPUT, p_inputName);
             inputNode.Execute(p_flowData);
             return true;
         }
@@ -511,6 +526,78 @@ namespace Dash
             }
 
             return killed;
+        }
+
+        /// <summary>Live (in-flight, not stopped) execution with this id, or null.</summary>
+        public GraphExecution GetExecution(ExecutionId p_id)
+        {
+            if (_executions == null)
+                return null;
+
+            for (int i = 0; i < _executions.Count; i++)
+            {
+                if (_executions[i].id == p_id && !_executions[i].IsStopped)
+                    return _executions[i];
+            }
+
+            return null;
+        }
+
+        /// <summary>Stops the live execution with this id. Returns false when none exists.</summary>
+        public bool Stop(ExecutionId p_id)
+        {
+            GraphExecution execution = GetExecution(p_id);
+            if (execution == null)
+                return false;
+
+            execution.Stop();
+            return true;
+        }
+
+        /// <summary>Stops every live flow started from the named graph input. Returns the count stopped.</summary>
+        public int StopExecutionsByInput(string p_inputName)
+        {
+            return StopExecutionsMatching(e =>
+                e.OriginType == ExecutionOriginType.INPUT && e.OriginName == p_inputName);
+        }
+
+        /// <summary>Stops every live flow started by the named event. Returns the count stopped.</summary>
+        public int StopExecutionsByEvent(string p_eventName)
+        {
+            return StopExecutionsMatching(e =>
+                e.OriginType == ExecutionOriginType.EVENT && e.OriginName == p_eventName);
+        }
+
+        /// <summary>
+        /// Stops every live flow whose INITIAL target was p_target (later retargeting does not
+        /// change a flow's origin target). This is per-target FLOW stop — full teardown of the
+        /// runs started on that target — as opposed to StopAnimations, which only kills tweens.
+        /// </summary>
+        public int StopExecutionsByTarget(Transform p_target)
+        {
+            return StopExecutionsMatching(e => e.OriginTarget == p_target);
+        }
+
+        // Snapshot-then-stop: a disposal run by Stop can synchronously start new flows, which
+        // mint executions and mutate _executions — never iterate the live list while stopping.
+        private int StopExecutionsMatching(Predicate<GraphExecution> p_match)
+        {
+            if (_executions == null)
+                return 0;
+
+            List<GraphExecution> matched = new List<GraphExecution>();
+
+            for (int i = 0; i < _executions.Count; i++)
+            {
+                GraphExecution execution = _executions[i];
+                if (!execution.IsStopped && execution.TotalFrames > 0 && p_match(execution))
+                    matched.Add(execution);
+            }
+
+            for (int i = 0; i < matched.Count; i++)
+                matched[i].Stop();
+
+            return matched.Count;
         }
         
         private HashSet<NodeBase> _downstreamNodes = new HashSet<NodeBase>();

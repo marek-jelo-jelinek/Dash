@@ -173,9 +173,14 @@ namespace Dash
 
             // Safety net: any flow that reaches a node without an execution identity is a genuine
             // origin (direct Execute calls from event nodes, third-party hand-built flow data).
-            // Mint here so it propagates through the clone below and onward.
+            // Mint here so it propagates through the clone below and onward. Origin type is NONE
+            // (unknown entry point) but the target is stamped so the flow stays addressable via
+            // StopExecutionsByTarget.
             if (p_flowData != null && p_flowData.execution == null && _graph != null)
+            {
                 p_flowData.execution = _graph.CreateExecution();
+                p_flowData.execution.SetOrigin(ExecutionOriginType.NONE, null, p_flowData);
+            }
 
             // Mirror the node-level count onto the owning execution's per-node frame map. The clone
             // handed to OnExecuteStart shares this same execution reference, so the matching

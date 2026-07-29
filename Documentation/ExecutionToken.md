@@ -1,6 +1,6 @@
 # EXECUTION TOKENS — PER-FLOW IDENTITY AND STOP
 
-*Branch: `feature/execution-token` (7 commits, `ab066f5..3bfe184`). Status: complete, manually verified.*
+*Branch: `feature/execution-token` (8 phases). Status: complete, manually verified.*
 
 ## Why
 
@@ -69,6 +69,28 @@ Inside a graph, a `StopNode` set to `StopMode.FLOW` stops the flow running it (v
 `p_flowData.execution`) — `FLOW` was appended to the end of the ordinal-serialized enum, so
 existing assets keep their values.
 
+## Addressable executions
+
+Flows can also be found and stopped without holding a handle. Every execution is stamped at
+mint time with its origin — `OriginType` (INPUT / EVENT / NONE), `OriginName` and
+`OriginTarget` (the flow's TARGET at start; retargeting later does not change it). A flow that
+arrives already carrying an execution keeps its original origin through events and subgraphs.
+
+```c#
+GraphExecution execution = controller.SendEvent("Popup");   // event sends return the handle too
+
+controller.Stop(executionId);                    // by id (registry lookup)
+controller.StopExecutionsByInput("Run");         // every live flow started from input "Run"
+controller.StopExecutionsByEvent("Popup");       // every live cascade of event "Popup"
+controller.StopExecutionsByTarget(transform);    // every live flow STARTED ON this target
+```
+
+`StopExecutionsByTarget` is per-target FLOW stop — full teardown of the runs started on that
+target — as opposed to `StopAnimations(target)`, which only kills tweens and leaves the flows
+running. The `StopExecutionsBy*` methods snapshot matches before stopping (a disposal may
+synchronously start new flows) and return the number of flows stopped. All of these exist on
+`DashGraph` with `DashController` passthroughs.
+
 ## Change log by phase
 
 1. **Identity plumbing** — `ExecutionId`, `GraphExecution`; `NodeFlowData.execution` propagated
@@ -95,6 +117,10 @@ existing assets keep their values.
 7. **Per-target stop** — `GraphExecution.KillTweensByTarget` with guarded per-kill frame
    closing (exact accounting; the pre-2021 version leaked `ExecutionCount`);
    `DashGraph.StopAnimations` / `DashController.StopAnimations`; `StopAnimationsNode` restored.
+8. **Addressable executions** — origin stamping (`ExecutionOriginType` + name + initial
+   target) on every mint; `SendEvent` returns the flow handle (graph and controller);
+   registry queries `GetExecution(id)` / `Stop(id)` / `StopExecutionsByInput` / `ByEvent` /
+   `ByTarget` with snapshot-then-stop iteration safety.
 
 ## Custom node migration
 
@@ -107,6 +133,9 @@ existing assets keep their values.
 
 ## Known limits / parked decisions
 
+- **`DashCore.SendEvent` (global) returns no handle** — one global send reaches many
+  controllers; when the flow data carries no execution each controller's clone mints its own,
+  so there is no single handle to return. Use `StopExecutionsByEvent(name)` per controller.
 - **No completion callback yet** (`execution.OnComplete`) — reachable now via the registry's
   frame rule, but not implemented.
 - **`hasErrorsInExecution` is still node-level** and never resets — moving it to execution
