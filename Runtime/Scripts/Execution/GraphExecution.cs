@@ -137,6 +137,27 @@ namespace Dash
             return _activeFrames != null && _activeFrames.ContainsKey(p_node);
         }
 
+        /// <summary>
+        /// True while this execution has at least one open frame on a node of p_graph — i.e. the
+        /// flow is currently running IN that graph. A cross-controller cascade or a flow inside a
+        /// subgraph is "in" a graph only while it holds frames there (a SubGraphNode keeps a frame
+        /// open on the outer graph for the duration of the subgraph run, so outer graphs count).
+        /// Graph-scoped stops use this to own exactly the flows running in them.
+        /// </summary>
+        public bool HasFramesIn(DashGraph p_graph)
+        {
+            if (_activeFrames == null || p_graph == null)
+                return false;
+
+            foreach (var pair in _activeFrames)
+            {
+                if (pair.Key.Graph == p_graph)
+                    return true;
+            }
+
+            return false;
+        }
+
         /// <summary>Registers a tween as belonging to this execution, owned by p_owner. Returns it for chaining.</summary>
         public DashTween TrackTween(NodeBase p_owner, DashTween p_tween)
         {

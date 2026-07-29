@@ -422,14 +422,36 @@ namespace Dash
         /// </summary>
         public GraphExecution CreateExecution()
         {
-            if (_executions == null)
-                _executions = new List<GraphExecution>();
-            else
-                _executions.RemoveAll(e => e.IsStopped || e.TotalFrames == 0);
+            PruneExecutions();
 
             GraphExecution execution = new GraphExecution(DashCore.Instance.NextExecutionId(), this);
             _executions.Add(execution);
             return execution;
+        }
+
+        // Drops completed (zero frames anywhere) and stopped entries. Called on every mint AND
+        // every register-on-entry, so a graph that only ever receives foreign executions (a
+        // cross-controller event receiver, a subgraph) cannot grow its registry unboundedly.
+        private void PruneExecutions()
+        {
+            if (_executions == null)
+                _executions = new List<GraphExecution>();
+            else
+                _executions.RemoveAll(e => e.IsStopped || e.TotalFrames == 0);
+        }
+
+        // Register-on-entry: an execution minted elsewhere (cross-controller event cascade, a flow
+        // entering a subgraph) becomes addressable from THIS graph's registry too, so queries and
+        // graph-scoped stops on the receiving side can find it.
+        internal void RegisterExecution(GraphExecution p_execution)
+        {
+            if (p_execution == null)
+                return;
+
+            PruneExecutions();
+
+            if (!_executions.Contains(p_execution))
+                _executions.Add(p_execution);
         }
 
         /// <summary>
@@ -441,13 +463,20 @@ namespace Dash
         internal GraphExecution EnsureExecution(NodeFlowData p_flowData,
             ExecutionOriginType p_originType = ExecutionOriginType.NONE, string p_originName = null)
         {
-            if (p_flowData != null && p_flowData.execution == null)
+            if (p_flowData == null)
+                return null;
+
+            if (p_flowData.execution == null)
             {
                 p_flowData.execution = CreateExecution();
                 p_flowData.execution.SetOrigin(p_originType, p_originName, p_flowData);
             }
+            else
+            {
+                RegisterExecution(p_flowData.execution);
+            }
 
-            return p_flowData?.execution;
+            return p_flowData.execution;
         }
 
         public bool ExecuteGraphInput(string p_inputName, NodeFlowData p_flowData)
@@ -491,7 +520,11 @@ namespace Dash
 
                 foreach (GraphExecution execution in executions)
                 {
-                    if (!execution.IsStopped && execution.TotalFrames > 0)
+                    // Own only flows currently running IN this graph. A shared cascade that
+                    // already finished its part here (still running in another controller's
+                    // graph) is left alone; one that IS running here is one identity, so
+                    // stopping it tears it down everywhere.
+                    if (!execution.IsStopped && execution.HasFramesIn(this))
                         execution.Stop();
                 }
             }
@@ -580,6 +613,8 @@ namespace Dash
 
         // Snapshot-then-stop: a disposal run by Stop can synchronously start new flows, which
         // mint executions and mutate _executions — never iterate the live list while stopping.
+        // Matches only flows currently running IN this graph (see Stop()); stopping one tears it
+        // down everywhere, since an execution is one identity.
         private int StopExecutionsMatching(Predicate<GraphExecution> p_match)
         {
             if (_executions == null)
@@ -590,7 +625,7 @@ namespace Dash
             for (int i = 0; i < _executions.Count; i++)
             {
                 GraphExecution execution = _executions[i];
-                if (!execution.IsStopped && execution.TotalFrames > 0 && p_match(execution))
+                if (!execution.IsStopped && execution.HasFramesIn(this) && p_match(execution))
                     matched.Add(execution);
             }
 
