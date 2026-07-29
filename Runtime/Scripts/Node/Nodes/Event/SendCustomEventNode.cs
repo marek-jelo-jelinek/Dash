@@ -22,12 +22,18 @@ namespace Dash
             string eventName = GetParameterValue(Model.eventName, p_flowData);
             bool global = GetParameterValue(Model.global, p_flowData);
             bool sendData = GetParameterValue(Model.sendData, p_flowData);
+            bool detach = GetParameterValue(Model.detachExecution, p_flowData);
 
-            // The execution identity always propagates, even when attributes are not forwarded —
-            // sendData controls data, not identity. Without this a triggered cascade would look
-            // like an unrelated execution and escape a targeted stop.
-            NodeFlowData eventData = sendData ? p_flowData : NodeFlowDataFactory.Create();
-            if (!sendData)
+            // Identity: by default the triggered cascade rides the sender's execution — sendData
+            // controls data, not identity — so a targeted stop of the sender tears the cascade
+            // down too. With detachExecution the event is sent WITHOUT identity: each receiving
+            // graph mints its own run (origin EVENT <name>), stoppable per graph and unaffected
+            // by stopping the sender. Detach must never strip the sender's own flow data, hence
+            // the clone when forwarding data.
+            NodeFlowData eventData = sendData ? (detach ? p_flowData.Clone() : p_flowData) : NodeFlowDataFactory.Create();
+            if (detach)
+                eventData.execution = null;
+            else if (!sendData)
                 eventData.execution = p_flowData.execution;
 
             if (global)

@@ -91,6 +91,23 @@ running. The `StopExecutionsBy*` methods snapshot matches before stopping (a dis
 synchronously start new flows) and return the number of flows stopped. All of these exist on
 `DashGraph` with `DashController` passthroughs.
 
+**Detached event sends.** `SendCustomEventNode` has a `detachExecution` option (default off).
+Off: the triggered cascade rides the sender's execution — one identity, stopping the sender
+stops the cascade everywhere, but a receiving graph's slice cannot be stopped alone. On: the
+event is sent without identity, so every receiving graph mints its own run with
+`origin = EVENT <name>` — individually stoppable via `StopExecutionsByEvent`, and independent
+of the sender's lifetime. Choose per send-site: "my event's work is part of my run" vs "my
+event just starts other runs".
+
+**Register-on-entry and graph locality.** A graph registers not only the executions it mints
+but every execution that ENTERS it (a cross-controller event cascade, a flow entering a
+subgraph), so receiving graphs can address shared flows too. Graph-scoped stops — `Stop()` and
+`StopExecutionsBy*` — own exactly the flows *currently running in that graph*
+(`GraphExecution.HasFramesIn`): a shared cascade that already finished its part locally but
+still runs elsewhere is left alone; one that is running locally is one identity, so stopping
+it tears it down everywhere. Registries prune completed/stopped entries on every mint and
+every register-on-entry, so receive-only graphs stay bounded.
+
 ## Change log by phase
 
 1. **Identity plumbing** — `ExecutionId`, `GraphExecution`; `NodeFlowData.execution` propagated
@@ -120,7 +137,11 @@ synchronously start new flows) and return the number of flows stopped. All of th
 8. **Addressable executions** — origin stamping (`ExecutionOriginType` + name + initial
    target) on every mint; `SendEvent` returns the flow handle (graph and controller);
    registry queries `GetExecution(id)` / `Stop(id)` / `StopExecutionsByInput` / `ByEvent` /
-   `ByTarget` with snapshot-then-stop iteration safety.
+   `ByTarget` with snapshot-then-stop iteration safety. Register-on-entry: graphs register
+   executions that enter them, and graph-scoped stops own only flows with frames currently
+   in that graph (`HasFramesIn`) — fixing addressability of cross-controller cascades and
+   subgraph flows from the receiving side. `SendCustomEventNode.detachExecution` sends an
+   event without the sender's identity so each receiver mints its own addressable run.
 
 ## Custom node migration
 
@@ -135,15 +156,21 @@ synchronously start new flows) and return the number of flows stopped. All of th
 
 - **`DashCore.SendEvent` (global) returns no handle** — one global send reaches many
   controllers; when the flow data carries no execution each controller's clone mints its own,
-  so there is no single handle to return. Use `StopExecutionsByEvent(name)` per controller.
+  so there is no single handle to return. Use `StopExecutionsByEvent(name)` per controller —
+  which, since register-on-entry, also finds shared cascades on the receiving side.
+- **Stopping a shared execution is all-or-nothing** — graph locality governs WHICH flows a
+  graph-scoped stop selects, but stopping a selected flow tears it down in every graph it
+  spans (one identity). Per-graph partial teardown would need child executions (not planned).
 - **No completion callback yet** (`execution.OnComplete`) — reachable now via the registry's
   frame rule, but not implemented.
 - **`hasErrorsInExecution` is still node-level** and never resets — moving it to execution
   scope is a semantic change (an error would halt the whole flow) awaiting a decision.
 - **`StoreStateNode` does not restore on stop** — auto-reverting transforms during teardown is
   a strong semantic, parked deliberately.
-- **Cross-controller events share one execution** — a global event carries its origin
-  execution to every controller; stopping it stops the cascade everywhere (v1 semantics).
+- **Cross-controller events share one execution** — a global event sent from inside a graph
+  carries its origin execution to every controller (one identity). Since register-on-entry
+  each receiving graph can address it, and graph-scoped stops touch it only while it runs
+  locally.
 - The whole-graph node sweep (`Nodes.ForEach(n => n.Stop())`) is retained after per-execution
   teardown as a belt-and-suspenders pass for execution-less flows (editor preview, legacy
   third-party nodes).
