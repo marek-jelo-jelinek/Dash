@@ -137,6 +137,74 @@ namespace Dash
             return _activeFrames != null && _activeFrames.ContainsKey(p_node);
         }
 
+        /// <summary>True once the flow is over — stopped, or no open frames anywhere. Only
+        /// meaningful when observed OUTSIDE the synchronous execution stack (frames touch zero
+        /// between every hop), which is why completion callbacks fire from a tick.</summary>
+        public bool IsEnded => IsStopped || TotalFrames == 0;
+
+        // ---- Completion -----------------------------------------------------------------------
+
+        private List<System.Action<GraphExecution>> _completionCallbacks;
+        private bool _completionFired;
+
+        /// <summary>
+        /// Registers a callback fired ONCE when this flow ends — on the owning controller's next
+        /// Update after the last frame closes (or after a stop; check IsStopped in the callback
+        /// for which it was). Chainable: controller.ExecuteInput("Run", data)?.OnComplete(...).
+        /// Registering after the flow already ended still fires on the next tick (the execution
+        /// re-registers itself with its graph); registering after the callback round already
+        /// fired invokes immediately.
+        /// </summary>
+        public GraphExecution OnComplete(System.Action<GraphExecution> p_callback)
+        {
+            if (p_callback == null)
+                return this;
+
+            if (_completionFired)
+            {
+                p_callback(this);
+                return this;
+            }
+
+            if (_completionCallbacks == null)
+                _completionCallbacks = new List<System.Action<GraphExecution>>();
+
+            _completionCallbacks.Add(p_callback);
+
+            // If the flow already ended, its registry entry may have been pruned before this
+            // registration — re-register so a tick still observes and fires it. Registration is
+            // idempotent and the pending callback protects the entry from pruning.
+            if (IsEnded && graph != null)
+                graph.RegisterExecution(this);
+
+            return this;
+        }
+
+        /// <summary>True while completion callbacks are registered and not yet fired — such an
+        /// execution must survive registry pruning until a tick fires it.</summary>
+        public bool HasPendingCompletion => !_completionFired && _completionCallbacks != null && _completionCallbacks.Count > 0;
+
+        // Fires all completion callbacks exactly once (graphs sharing this execution race to it;
+        // the latch makes it safe). Called by DashGraph.TickExecutions outside the execution stack.
+        internal void FireCompletion()
+        {
+            if (_completionFired)
+                return;
+
+            _completionFired = true;
+
+            if (_completionCallbacks == null)
+                return;
+
+            // Snapshot: a callback may register further callbacks (which then fire immediately
+            // via the latch) or start new flows — never iterate the live list.
+            List<System.Action<GraphExecution>> callbacks = _completionCallbacks;
+            _completionCallbacks = null;
+
+            for (int i = 0; i < callbacks.Count; i++)
+                callbacks[i]?.Invoke(this);
+        }
+
         /// <summary>
         /// True while this execution has at least one open frame on a node of p_graph — i.e. the
         /// flow is currently running IN that graph. A cross-controller cascade or a flow inside a

@@ -99,6 +99,24 @@ event is sent without identity, so every receiving graph mints its own run with
 of the sender's lifetime. Choose per send-site: "my event's work is part of my run" vs "my
 event just starts other runs".
 
+**Completion callbacks.** `execution.OnComplete(callback)` (chainable) fires ONCE when the
+flow ends — check `execution.IsStopped` inside the callback to distinguish teardown from
+natural completion:
+
+```c#
+controller.ExecuteInput("Run", flowData)?.OnComplete(e =>
+    Debug.Log(e + (e.IsStopped ? " was stopped" : " completed")));
+```
+
+Timing contract: callbacks fire on the owning controller's next `Update` after the flow ends,
+never mid-execution — frames touch zero between every synchronous hop, so completion is only
+meaningful observed from outside the execution stack (`DashGraph.TickExecutions`, driven by
+`DashController.Update` and the editor previewer). Two documented exceptions: registering on
+an execution whose callback round already fired invokes immediately, and a destroyed
+controller fires pending callbacks synchronously after its final stop rather than dropping
+them. Registering after the flow ended but before firing is safe (the execution re-registers
+with its graph so a tick still observes it).
+
 **Register-on-entry and graph locality.** A graph registers not only the executions it mints
 but every execution that ENTERS it (a cross-controller event cascade, a flow entering a
 subgraph), so receiving graphs can address shared flows too. Graph-scoped stops — `Stop()` and
@@ -142,6 +160,9 @@ every register-on-entry, so receive-only graphs stay bounded.
    in that graph (`HasFramesIn`) — fixing addressability of cross-controller cascades and
    subgraph flows from the receiving side. `SendCustomEventNode.detachExecution` sends an
    event without the sender's identity so each receiver mints its own addressable run.
+9. **Completion callbacks** — `execution.OnComplete` fired once per flow from
+   `DashGraph.TickExecutions` (controller Update / previewer tick); registry pruning protects
+   entries with unfired callbacks; late registration re-registers with the graph.
 
 ## Custom node migration
 
@@ -161,8 +182,8 @@ every register-on-entry, so receive-only graphs stay bounded.
 - **Stopping a shared execution is all-or-nothing** — graph locality governs WHICH flows a
   graph-scoped stop selects, but stopping a selected flow tears it down in every graph it
   spans (one identity). Per-graph partial teardown would need child executions (not planned).
-- **No completion callback yet** (`execution.OnComplete`) — reachable now via the registry's
-  frame rule, but not implemented.
+- **Completion timing is frame-quantized** — `OnComplete` fires on the next controller Update
+  after the flow ends (see Completion callbacks), so up to one frame of latency by design.
 - **`hasErrorsInExecution` is still node-level** and never resets — moving it to execution
   scope is a semantic change (an error would halt the whole flow) awaiting a decision.
 - **`StoreStateNode` does not restore on stop** — auto-reverting transforms during teardown is

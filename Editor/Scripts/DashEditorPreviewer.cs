@@ -80,7 +80,10 @@ namespace Dash.Editor
                 _previewStarted = true;
                 _previewGraph.Nodes[_previewNodeIndex].Execute(NodeFlowDataFactory.Create(_previewController.transform));
             }
-            
+
+            // Preview graphs have no DashController.Update, so fire execution completions here.
+            _previewGraph.TickExecutions();
+
             if (_isPreviewing && !_previewStopScheduled)
             {
                 if (_previewGraph.CurrentExecutionCount == 0)

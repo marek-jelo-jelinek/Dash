@@ -432,12 +432,51 @@ namespace Dash
         // Drops completed (zero frames anywhere) and stopped entries. Called on every mint AND
         // every register-on-entry, so a graph that only ever receives foreign executions (a
         // cross-controller event receiver, a subgraph) cannot grow its registry unboundedly.
+        // Entries with unfired completion callbacks are kept — TickExecutions owns their removal.
         private void PruneExecutions()
         {
             if (_executions == null)
                 _executions = new List<GraphExecution>();
             else
-                _executions.RemoveAll(e => e.IsStopped || e.TotalFrames == 0);
+                _executions.RemoveAll(e => e.IsEnded && !e.HasPendingCompletion);
+        }
+
+        /// <summary>
+        /// Observes execution completion and fires pending OnComplete callbacks. Runs on the
+        /// owning DashController's Update (and the editor previewer's tick) — completion is only
+        /// meaningful observed OUTSIDE the synchronous execution stack, because frames touch zero
+        /// between every hop. The fired latch on GraphExecution makes it safe that multiple
+        /// registries (main graph + subgraphs, cross-controller receivers) tick the same
+        /// execution; every runtime execution passes through its controller's main graph, so a
+        /// ticked main graph is sufficient to fire all callbacks.
+        /// </summary>
+        public void TickExecutions()
+        {
+            if (_executions == null || _executions.Count == 0)
+                return;
+
+            List<GraphExecution> toFire = null;
+
+            for (int i = 0; i < _executions.Count; i++)
+            {
+                GraphExecution execution = _executions[i];
+                if (execution.IsEnded && execution.HasPendingCompletion)
+                {
+                    if (toFire == null)
+                        toFire = new List<GraphExecution>();
+
+                    toFire.Add(execution);
+                }
+            }
+
+            // Fire outside the scan — a callback may start new flows and mutate the registry.
+            if (toFire != null)
+            {
+                for (int i = 0; i < toFire.Count; i++)
+                    toFire[i].FireCompletion();
+            }
+
+            PruneExecutions();
         }
 
         // Register-on-entry: an execution minted elsewhere (cross-controller event cascade, a flow
@@ -526,6 +565,14 @@ namespace Dash
                     // stopping it tears it down everywhere.
                     if (!execution.IsStopped && execution.HasFramesIn(this))
                         execution.Stop();
+                }
+
+                // The swap above dropped the registry — re-register entries whose OnComplete has
+                // not fired yet, so the next tick (or the destroy-path tick) still fires them.
+                foreach (GraphExecution execution in executions)
+                {
+                    if (execution.HasPendingCompletion)
+                        RegisterExecution(execution);
                 }
             }
 

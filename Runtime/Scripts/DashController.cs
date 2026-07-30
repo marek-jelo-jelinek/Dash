@@ -219,6 +219,12 @@ namespace Dash
         void Update()
         {
             UpdateCallback?.Invoke();
+
+            // Completion observation point: fires execution OnComplete callbacks for flows that
+            // ended since the last frame. Uses the instance field directly — no lazy Graph
+            // instantiation from a tick.
+            if (_graphInstance != null)
+                _graphInstance.TickExecutions();
         }
 
         public GraphExecution SendEvent(string p_name)
@@ -334,9 +340,14 @@ namespace Dash
         private void OnDestroy()
         {
             Core.Unbind(this);
-            
+
             if (Graph != null) {
                 Graph.Stop();
+
+                // Documented exception to fire-on-tick: there will be no further Update, so fire
+                // pending OnComplete callbacks now (IsStopped tells them why) instead of leaving
+                // waiting game code hanging forever.
+                Graph.TickExecutions();
             }
         }
 
