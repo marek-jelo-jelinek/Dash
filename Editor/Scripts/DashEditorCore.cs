@@ -8,7 +8,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using OdinSerializer.Utilities;
 using UnityEditor;
 using UnityEngine;
@@ -49,8 +48,8 @@ namespace Dash.Editor
 
         static DashEditorCore()
         {
-            SetExecutionOrder(typeof(DashVariablesController), -501);
-            SetExecutionOrder(typeof(DashController), -500);
+            SetExecutionOrder("Packages/com.shtif.dash/Runtime/Scripts/Variables/DashVariablesController.cs", -501);
+            SetExecutionOrder("Packages/com.shtif.dash/Runtime/Scripts/DashController.cs", -500);
 
             EditorConfig = DashEditorConfig.Create();
             RuntimeConfig = DashRuntimeConfig.Create();
@@ -114,16 +113,19 @@ namespace Dash.Editor
             }
         }
 
-        static void SetExecutionOrder(Type p_classType, int p_order)
+        static void SetExecutionOrder(string p_scriptPath, int p_order)
         {
-            MonoScript[] scripts = (MonoScript[])Resources.FindObjectsOfTypeAll(typeof(MonoScript));
-            
-            MonoScript classScript = scripts.First(s => s.GetClass() == p_classType);
+            MonoScript script = AssetDatabase.LoadAssetAtPath<MonoScript>(p_scriptPath);
+            if (!script)
+            {
+                Debug.LogWarning($"[Dash] Could not find script at path '{p_scriptPath}' to set execution order.");
+                return;
+            }
 
             // We need to check the order first and set only if different otherwise we may get into infinity reload assembly loop.
-            if (MonoImporter.GetExecutionOrder(classScript) != p_order)
+            if (MonoImporter.GetExecutionOrder(script) != p_order)
             {
-                MonoImporter.SetExecutionOrder(classScript, p_order);
+                MonoImporter.SetExecutionOrder(script, p_order);
             }
         }
 
