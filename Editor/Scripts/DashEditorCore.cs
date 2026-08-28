@@ -30,8 +30,20 @@ namespace Dash.Editor
         static public GUISkin Skin => (GUISkin)Resources.Load("Skins/EditorSkins/NodeEditorSkin");
 
         //static public bool DetailsVisible => EditorConfig.zoom < 2.5;
-        
-        static public List<DashGraph> GraphAssets { get; private set; }
+
+        static private List<DashGraph> _graphAssets;
+
+        static public List<DashGraph> GraphAssets
+        {
+            get
+            {
+                if (_graphAssets == null)
+                {
+                    ScanGraphAssets();
+                }
+                return _graphAssets;
+            }
+        }
 
         static public string propertyReference;
 
@@ -44,10 +56,8 @@ namespace Dash.Editor
             RuntimeConfig = DashRuntimeConfig.Create();
             
             Previewer = new DashEditorPreviewer();
-            
-            CheckDashVersion();
 
-            ScanGraphAssets();
+            CheckDashVersion();
 
             SetDefineSymbols();
 
@@ -80,7 +90,7 @@ namespace Dash.Editor
 
         public static void ScanGraphAssets()
         {
-            GraphAssets = AssetUtils.FindAllAssetsByType<DashGraph>();
+            _graphAssets = AssetUtils.FindAllAssetsByType<DashGraph>();
         }
 
         static void CheckDashVersion()
